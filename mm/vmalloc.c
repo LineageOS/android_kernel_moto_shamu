@@ -1373,15 +1373,15 @@ static void setup_vmalloc_vm(struct vm_struct *vm, struct vmap_area *va,
 	spin_unlock(&vmap_area_lock);
 }
 
-static void clear_vm_unlist(struct vm_struct *vm)
+static void clear_vm_uninitialized_flag(struct vm_struct *vm)
 {
 	/*
-	 * Before removing VM_UNLIST,
+	 * Before removing VM_UNINITIALIZED,
 	 * we should make sure that vm has proper values.
 	 * Pair with smp_rmb() in show_numa_info().
 	 */
 	smp_wmb();
-	vm->flags &= ~VM_UNLIST;
+	vm->flags &= ~VM_UNINITIALIZED;
 }
 
 static struct vm_struct *__get_vm_area_node(unsigned long size,
@@ -1735,7 +1735,7 @@ void *__vmalloc_node_range(unsigned long size, unsigned long align,
 	if (!size || (size >> PAGE_SHIFT) > total_pages)
 		goto fail;
 
-	area = __get_vm_area_node(size, align, VM_ALLOC | VM_UNLIST,
+	area = __get_vm_area_node(size, align, VM_ALLOC | VM_UNINITIALIZED,
 				  start, end, node, gfp_mask, caller);
 	if (!area)
 		goto fail;
@@ -1745,11 +1745,11 @@ void *__vmalloc_node_range(unsigned long size, unsigned long align,
 		goto fail;
 
 	/*
-	 * In this function, newly allocated vm_struct has VM_UNLIST flag.
-	 * It means that vm_struct is not fully initialized.
+	 * In this function, newly allocated vm_struct has VM_UNINITIALIZED
+	 * flag. It means that vm_struct is not fully initialized.
 	 * Now, it is fully initialized, so remove this flag here.
 	 */
-	clear_vm_unlist(area);
+	clear_vm_uninitialized_flag(area);
 
 	/*
 	 * A ref_count = 2 is needed because vm_struct allocated in
@@ -2669,9 +2669,9 @@ static void show_numa_info(struct seq_file *m, struct vm_struct *v)
 		if (!counters)
 			return;
 
-		/* Pair with smp_wmb() in clear_vm_unlist() */
+		/* Pair with smp_wmb() in clear_vm_uninitialized_flag() */
 		smp_rmb();
-		if (v->flags & VM_UNLIST)
+		if (v->flags & VM_UNINITIALIZED)
 			return;
 
 		memset(counters, 0, nr_node_ids * sizeof(unsigned int));
