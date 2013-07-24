@@ -554,7 +554,7 @@ static void smack_inode_free_security(struct inode *inode)
  * Returns 0 if it all works out, -ENOMEM if there's no memory
  */
 static int smack_inode_init_security(struct inode *inode, struct inode *dir,
-				     const struct qstr *qstr, char **name,
+				     const struct qstr *qstr, const char **name,
 				     void **value, size_t *len)
 {
 	struct smack_known *skp;
@@ -564,11 +564,8 @@ static int smack_inode_init_security(struct inode *inode, struct inode *dir,
 	char *dsp = smk_of_inode(dir);
 	int may;
 
-	if (name) {
-		*name = kstrdup(XATTR_SMACK_SUFFIX, GFP_NOFS);
-		if (*name == NULL)
-			return -ENOMEM;
-	}
+	if (name)
+		*name = XATTR_SMACK_SUFFIX;
 
 	if (value) {
 		skp = smk_find_entry(csp);
