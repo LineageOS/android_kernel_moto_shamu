@@ -320,10 +320,10 @@ static ssize_t ad5933_store_frequency(struct device *dev,
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct ad5933_state *st = iio_priv(indio_dev);
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
-	long val;
+	unsigned long val;
 	int ret;
 
-	ret = strict_strtoul(buf, 10, &val);
+	ret = kstrtoul(buf, 10, &val);
 	if (ret)
 		return ret;
 
@@ -397,12 +397,12 @@ static ssize_t ad5933_store(struct device *dev,
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct ad5933_state *st = iio_priv(indio_dev);
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
-	long val;
+	u16 val;
 	int i, ret = 0;
 	unsigned short dat;
 
 	if (this_attr->address != AD5933_IN_PGA_GAIN) {
-		ret = strict_strtol(buf, 10, &val);
+		ret = kstrtou16(buf, 10, &val);
 		if (ret)
 			return ret;
 	}
@@ -431,7 +431,7 @@ static ssize_t ad5933_store(struct device *dev,
 		ret = ad5933_cmd(st, 0);
 		break;
 	case AD5933_OUT_SETTLING_CYCLES:
-		val = clamp(val, 0L, 0x7FFL);
+		val = clamp(val, (u16)0, (u16)0x7FF);
 		st->settling_cycles = val;
 
 		/* 2x, 4x handling, see datasheet */
@@ -445,7 +445,7 @@ static ssize_t ad5933_store(struct device *dev,
 				AD5933_REG_SETTLING_CYCLES, 2, (u8 *)&dat);
 		break;
 	case AD5933_FREQ_POINTS:
-		val = clamp(val, 0L, 511L);
+		val = clamp(val, (u16)0, (u16)511);
 		st->freq_points = val;
 
 		dat = cpu_to_be16(val);
