@@ -92,10 +92,6 @@ extern int dc21285_setup(int nr, struct pci_sys_data *);
 extern void dc21285_preinit(void);
 extern void dc21285_postinit(void);
 
-extern struct pci_ops via82c505_ops;
-extern int via82c505_setup(int nr, struct pci_sys_data *);
-extern void via82c505_init(void *sysdata);
-
 extern struct pci_ops pci_v3_ops;
 extern int pci_v3_setup(int nr, struct pci_sys_data *);
 extern void pci_v3_preinit(void);
