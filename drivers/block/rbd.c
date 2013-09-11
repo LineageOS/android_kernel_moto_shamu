@@ -5184,7 +5184,7 @@ static ssize_t rbd_remove(struct bus_type *bus,
 	bool already = false;
 	int ret;
 
-	ret = strict_strtoul(buf, 10, &ul);
+	ret = kstrtoul(buf, 10, &ul);
 	if (ret)
 		return ret;
 
