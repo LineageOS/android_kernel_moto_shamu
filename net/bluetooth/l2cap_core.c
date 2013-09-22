@@ -5803,7 +5803,7 @@ static int l2cap_rx_state_recv(struct l2cap_chan *chan,
 			       struct sk_buff *skb, u8 event)
 {
 	int err = 0;
-	bool skb_in_use = 0;
+	bool skb_in_use = false;
 
 	BT_DBG("chan %p, control %p, skb %p, event %d", chan, control, skb,
 	       event);
@@ -5824,7 +5824,7 @@ static int l2cap_rx_state_recv(struct l2cap_chan *chan,
 							   control->txseq);
 
 			chan->buffer_seq = chan->expected_tx_seq;
-			skb_in_use = 1;
+			skb_in_use = true;
 
 			err = l2cap_reassemble_sdu(chan, skb, control);
 			if (err)
@@ -5860,7 +5860,7 @@ static int l2cap_rx_state_recv(struct l2cap_chan *chan,
 			 * current frame is stored for later use.
 			 */
 			skb_queue_tail(&chan->srej_q, skb);
-			skb_in_use = 1;
+			skb_in_use = true;
 			BT_DBG("Queued %p (queue len %d)", skb,
 			       skb_queue_len(&chan->srej_q));
 
@@ -5938,7 +5938,7 @@ static int l2cap_rx_state_srej_sent(struct l2cap_chan *chan,
 {
 	int err = 0;
 	u16 txseq = control->txseq;
-	bool skb_in_use = 0;
+	bool skb_in_use = false;
 
 	BT_DBG("chan %p, control %p, skb %p, event %d", chan, control, skb,
 	       event);
@@ -5950,7 +5950,7 @@ static int l2cap_rx_state_srej_sent(struct l2cap_chan *chan,
 			/* Keep frame for reassembly later */
 			l2cap_pass_to_tx(chan, control);
 			skb_queue_tail(&chan->srej_q, skb);
-			skb_in_use = 1;
+			skb_in_use = true;
 			BT_DBG("Queued %p (queue len %d)", skb,
 			       skb_queue_len(&chan->srej_q));
 
@@ -5961,7 +5961,7 @@ static int l2cap_rx_state_srej_sent(struct l2cap_chan *chan,
 
 			l2cap_pass_to_tx(chan, control);
 			skb_queue_tail(&chan->srej_q, skb);
-			skb_in_use = 1;
+			skb_in_use = true;
 			BT_DBG("Queued %p (queue len %d)", skb,
 			       skb_queue_len(&chan->srej_q));
 
@@ -5976,7 +5976,7 @@ static int l2cap_rx_state_srej_sent(struct l2cap_chan *chan,
 			 * the missing frames.
 			 */
 			skb_queue_tail(&chan->srej_q, skb);
-			skb_in_use = 1;
+			skb_in_use = true;
 			BT_DBG("Queued %p (queue len %d)", skb,
 			       skb_queue_len(&chan->srej_q));
 
@@ -5990,7 +5990,7 @@ static int l2cap_rx_state_srej_sent(struct l2cap_chan *chan,
 			 * SREJ'd frames.
 			 */
 			skb_queue_tail(&chan->srej_q, skb);
-			skb_in_use = 1;
+			skb_in_use = true;
 			BT_DBG("Queued %p (queue len %d)", skb,
 			       skb_queue_len(&chan->srej_q));
 
