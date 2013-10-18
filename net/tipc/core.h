@@ -89,13 +89,13 @@ extern int tipc_random __read_mostly;
 /*
  * Routines available to privileged subsystems
  */
-extern int tipc_core_start_net(unsigned long);
-extern int  tipc_handler_start(void);
-extern void tipc_handler_stop(void);
-extern int  tipc_netlink_start(void);
-extern void tipc_netlink_stop(void);
-extern int  tipc_socket_init(void);
-extern void tipc_socket_stop(void);
+int tipc_core_start_net(unsigned long);
+int  tipc_handler_start(void);
+void tipc_handler_stop(void);
+int  tipc_netlink_start(void);
+void tipc_netlink_stop(void);
+int  tipc_socket_init(void);
+void tipc_socket_stop(void);
 
 /*
  * TIPC timer and signal code
@@ -188,6 +188,6 @@ static inline struct tipc_msg *buf_msg(struct sk_buff *skb)
 	return (struct tipc_msg *)skb->data;
 }
 
-extern struct sk_buff *tipc_buf_acquire(u32 size);
+struct sk_buff *tipc_buf_acquire(u32 size);
 
 #endif
