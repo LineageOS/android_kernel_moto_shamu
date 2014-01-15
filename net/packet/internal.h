@@ -65,7 +65,7 @@ struct packet_ring_buffer {
 	unsigned int		pg_vec_pages;
 	unsigned int		pg_vec_len;
 
-	atomic_t		pending;
+	unsigned int __percpu	*pending_refcnt;
 
 	struct tpacket_kbdq_core	prb_bdqc;
 };
