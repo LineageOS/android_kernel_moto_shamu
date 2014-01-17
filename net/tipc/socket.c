@@ -493,7 +493,7 @@ static int send_msg(struct kiocb *iocb, struct socket *sock,
 {
 	struct sock *sk = sock->sk;
 	struct tipc_port *tport = tipc_sk_port(sk);
-	struct sockaddr_tipc *dest = (struct sockaddr_tipc *)m->msg_name;
+	DECLARE_SOCKADDR(struct sockaddr_tipc *, dest, m->msg_name);
 	int needs_conn;
 	long timeout_val;
 	int res = -EINVAL;
@@ -603,7 +603,7 @@ static int send_packet(struct kiocb *iocb, struct socket *sock,
 {
 	struct sock *sk = sock->sk;
 	struct tipc_port *tport = tipc_sk_port(sk);
-	struct sockaddr_tipc *dest = (struct sockaddr_tipc *)m->msg_name;
+	DECLARE_SOCKADDR(struct sockaddr_tipc *, dest, m->msg_name);
 	long timeout_val;
 	int res;
 
@@ -785,7 +785,7 @@ static int auto_connect(struct socket *sock, struct tipc_msg *msg)
  */
 static void set_orig_addr(struct msghdr *m, struct tipc_msg *msg)
 {
-	struct sockaddr_tipc *addr = (struct sockaddr_tipc *)m->msg_name;
+	DECLARE_SOCKADDR(struct sockaddr_tipc *, addr, m->msg_name);
 
 	if (addr) {
 		addr->family = AF_TIPC;
