@@ -719,7 +719,7 @@ int ping_v4_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 	 */
 
 	if (msg->msg_name) {
-		struct sockaddr_in *usin = (struct sockaddr_in *)msg->msg_name;
+		DECLARE_SOCKADDR(struct sockaddr_in *, usin, msg->msg_name);
 		if (msg->msg_namelen < sizeof(*usin))
 			return -EINVAL;
 		if (usin->sin_family != AF_INET)
@@ -894,7 +894,7 @@ int ping_recvmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 
 	/* Copy the address and add cmsg data. */
 	if (family == AF_INET) {
-		struct sockaddr_in *sin = (struct sockaddr_in *)msg->msg_name;
+		DECLARE_SOCKADDR(struct sockaddr_in *, sin, msg->msg_name);
 
 		if (sin) {
 			sin->sin_family = AF_INET;
@@ -911,8 +911,7 @@ int ping_recvmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 	} else if (family == AF_INET6) {
 		struct ipv6_pinfo *np = inet6_sk(sk);
 		struct ipv6hdr *ip6 = ipv6_hdr(skb);
-		struct sockaddr_in6 *sin6 =
-			(struct sockaddr_in6 *)msg->msg_name;
+		DECLARE_SOCKADDR(struct sockaddr_in6 *, sin6, msg->msg_name);
 
 		if (sin6) {
 			sin6->sin6_family = AF_INET6;

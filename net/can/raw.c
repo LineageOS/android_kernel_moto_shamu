@@ -678,8 +678,7 @@ static int raw_sendmsg(struct kiocb *iocb, struct socket *sock,
 	int err;
 
 	if (msg->msg_name) {
-		struct sockaddr_can *addr =
-			(struct sockaddr_can *)msg->msg_name;
+		DECLARE_SOCKADDR(struct sockaddr_can *, addr, msg->msg_name);
 
 		if (msg->msg_namelen < sizeof(*addr))
 			return -EINVAL;
@@ -778,6 +777,7 @@ static int raw_recvmsg(struct kiocb *iocb, struct socket *sock,
 	sock_recv_ts_and_drops(msg, sk, skb);
 
 	if (msg->msg_name) {
+		__sockaddr_check_size(sizeof(struct sockaddr_can));
 		msg->msg_namelen = sizeof(struct sockaddr_can);
 		memcpy(msg->msg_name, skb->cb, msg->msg_namelen);
 	}
