@@ -92,6 +92,16 @@ config MSM_RUN_QUEUE_STATS
 	This information is exported to usespace via sysfs entries and userspace
 	algorithms uses info and decide when to turn on/off the cpu cores.
 
+config MSM_RPM_SMD
+	select MSM_MPM_OF
+	bool "RPM driver using SMD protocol"
+	help
+	  RPM is the dedicated hardware engine for managing shared SoC
+	  resources. This config adds driver support for using SMD as a
+	  transport layer communication with RPM hardware. It also selects
+	  the MSM_MPM config that programs the MPM module to monitor interrupts
+	  during sleep modes.
+
 config MSM_SMEM
 	depends on REMOTE_SPINLOCK_MSM
 	bool "MSM Shared Memory (SMEM)"
