@@ -306,8 +306,6 @@ out:
 		batadv_neigh_node_free_ref(router_gw);
 	if (router_orig)
 		batadv_neigh_node_free_ref(router_orig);
-
-	return;
 }
 
 static void batadv_gw_node_add(struct batadv_priv *bat_priv,
