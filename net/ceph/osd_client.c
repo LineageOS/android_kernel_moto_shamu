@@ -1873,7 +1873,6 @@ bad:
 	pr_err("osdc handle_map corrupt msg\n");
 	ceph_msg_dump(msg);
 	up_write(&osdc->map_sem);
-	return;
 }
 
 /*
@@ -2072,7 +2071,6 @@ done_err:
 
 bad:
 	pr_err("osdc handle_watch_notify corrupt msg\n");
-	return;
 }
 
 /*
