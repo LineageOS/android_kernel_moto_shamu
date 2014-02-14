@@ -50,7 +50,7 @@ struct dp_stats_percpu {
 	u64 n_hit;
 	u64 n_missed;
 	u64 n_lost;
-	struct u64_stats_sync sync;
+	struct u64_stats_sync syncp;
 };
 
 /**
