@@ -65,12 +65,16 @@ struct audit_krule {
 
 struct audit_field {
 	u32				type;
-	u32				val;
-	kuid_t				uid;
-	kgid_t				gid;
+	union {
+		u32			val;
+		kuid_t			uid;
+		kgid_t			gid;
+		struct {
+			char		*lsm_str;
+			void		*lsm_rule;
+		};
+	};
 	u32				op;
-	char				*lsm_str;
-	void				*lsm_rule;
 };
 
 extern int __init audit_register_class(int class, unsigned *list);
