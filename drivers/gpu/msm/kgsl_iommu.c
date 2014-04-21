@@ -1591,9 +1591,9 @@ static int kgsl_iommu_start(struct kgsl_mmu *mmu)
 	_iommu_unlock(iommu);
 
 	/* For complete CFF */
-	kgsl_cffdump_setmem(mmu->device, mmu->setstate_memory.gpuaddr +
+	kgsl_cffdump_write(mmu->device, mmu->setstate_memory.gpuaddr +
 				KGSL_IOMMU_SETSTATE_NOP_OFFSET,
-				cp_nop_packet(1), sizeof(unsigned int));
+				cp_nop_packet(1));
 
 	kgsl_iommu_disable_clk(mmu, KGSL_IOMMU_MAX_UNITS);
 	mmu->flags |= KGSL_FLAGS_STARTED;
