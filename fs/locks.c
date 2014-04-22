@@ -1941,7 +1941,7 @@ int fcntl_getlk(struct file *filp, unsigned int cmd, struct flock __user *l)
 	if (error)
 		goto out;
 
-	if (cmd == F_GETLKP) {
+	if (cmd == F_OFD_GETLK) {
 		error = -EINVAL;
 		if (flock.l_pid != 0)
 			goto out;
@@ -2075,7 +2075,7 @@ int fcntl_setlk(unsigned int fd, struct file *filp, unsigned int cmd,
 	 * FL_FILE_PVT flag and override the owner.
 	 */
 	switch (cmd) {
-	case F_SETLKP:
+	case F_OFD_SETLK:
 		error = -EINVAL;
 		if (flock.l_pid != 0)
 			goto out;
@@ -2084,7 +2084,7 @@ int fcntl_setlk(unsigned int fd, struct file *filp, unsigned int cmd,
 		file_lock->fl_flags |= FL_FILE_PVT;
 		file_lock->fl_owner = (fl_owner_t)filp;
 		break;
-	case F_SETLKPW:
+	case F_OFD_SETLKW:
 		error = -EINVAL;
 		if (flock.l_pid != 0)
 			goto out;
@@ -2145,7 +2145,7 @@ int fcntl_getlk64(struct file *filp, unsigned int cmd, struct flock64 __user *l)
 	if (error)
 		goto out;
 
-	if (cmd == F_GETLKP) {
+	if (cmd == F_OFD_GETLK) {
 		error = -EINVAL;
 		if (flock.l_pid != 0)
 			goto out;
@@ -2212,7 +2212,7 @@ int fcntl_setlk64(unsigned int fd, struct file *filp, unsigned int cmd,
 	 * FL_FILE_PVT flag and override the owner.
 	 */
 	switch (cmd) {
-	case F_SETLKP:
+	case F_OFD_SETLK:
 		error = -EINVAL;
 		if (flock.l_pid != 0)
 			goto out;
@@ -2221,7 +2221,7 @@ int fcntl_setlk64(unsigned int fd, struct file *filp, unsigned int cmd,
 		file_lock->fl_flags |= FL_FILE_PVT;
 		file_lock->fl_owner = (fl_owner_t)filp;
 		break;
-	case F_SETLKPW:
+	case F_OFD_SETLKW:
 		error = -EINVAL;
 		if (flock.l_pid != 0)
 			goto out;
@@ -2422,7 +2422,7 @@ static void lock_get_status(struct seq_file *f, struct file_lock *fl,
 		if (fl->fl_flags & FL_ACCESS)
 			seq_printf(f, "ACCESS");
 		else if (IS_FILE_PVT(fl))
-			seq_printf(f, "FLPVT ");
+			seq_printf(f, "OFDLCK");
 		else
 			seq_printf(f, "POSIX ");
 
