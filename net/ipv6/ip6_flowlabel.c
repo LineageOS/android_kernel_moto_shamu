@@ -31,7 +31,6 @@
 #include <net/ndisc.h>
 #include <net/protocol.h>
 #include <net/ip6_route.h>
-#include <net/addrconf.h>
 #include <net/rawv6.h>
 #include <net/icmp.h>
 #include <net/transp_v6.h>

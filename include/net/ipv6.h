@@ -608,6 +608,11 @@ static inline bool ipv6_addr_orchid(const struct in6_addr *a)
 	return (a->s6_addr32[0] & htonl(0xfffffff0)) == htonl(0x20010010);
 }
 
+static inline bool ipv6_addr_is_multicast(const struct in6_addr *addr)
+{
+	return (addr->s6_addr32[0] & htonl(0xFF000000)) == htonl(0xFF000000);
+}
+
 static inline void ipv6_addr_set_v4mapped(const __be32 addr,
 					  struct in6_addr *v4mapped)
 {
@@ -683,6 +688,22 @@ static inline int __ipv6_addr_diff(const void *token1, const void *token2, int a
 static inline int ipv6_addr_diff(const struct in6_addr *a1, const struct in6_addr *a2)
 {
 	return __ipv6_addr_diff(a1, a2, sizeof(struct in6_addr));
+}
+
+int ip6_dst_hoplimit(struct dst_entry *dst);
+
+static inline int ip6_sk_dst_hoplimit(struct ipv6_pinfo *np, struct flowi6 *fl6,
+				      struct dst_entry *dst)
+{
+	int hlimit;
+
+	if (ipv6_addr_is_multicast(&fl6->daddr))
+		hlimit = np->mcast_hops;
+	else
+		hlimit = np->hop_limit;
+	if (hlimit < 0)
+		hlimit = ip6_dst_hoplimit(dst);
+	return hlimit;
 }
 
 /*
