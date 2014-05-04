@@ -42,7 +42,7 @@
 static bool ip_may_fragment(const struct sk_buff *skb)
 {
 	return unlikely((ip_hdr(skb)->frag_off & htons(IP_DF)) == 0) ||
-		skb->local_df;
+		skb->ignore_df;
 }
 
 static bool ip_exceeds_mtu(const struct sk_buff *skb, unsigned int mtu)
@@ -60,7 +60,7 @@ static bool ip_gso_exceeds_dst_mtu(const struct sk_buff *skb)
 {
 	unsigned int mtu;
 
-	if (skb->local_df || !skb_is_gso(skb))
+	if (skb->ignore_df || !skb_is_gso(skb))
 		return false;
 
 	mtu = dst_mtu(skb_dst(skb));
