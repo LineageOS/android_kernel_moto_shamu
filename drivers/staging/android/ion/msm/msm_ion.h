@@ -170,6 +170,12 @@ int msm_ion_secure_buffer(struct ion_client *client, struct ion_handle *handle,
  */
 int msm_ion_unsecure_buffer(struct ion_client *client,
 				struct ion_handle *handle);
+
+
+int msm_ion_secure_table(struct sg_table *table, enum cp_mem_usage usage,
+				int flags);
+
+int msm_ion_unsecure_table(struct sg_table *table);
 #else
 static inline struct ion_client *msm_ion_client_create(unsigned int heap_mask,
 					const char *name)
@@ -203,6 +209,20 @@ static inline int msm_ion_unsecure_buffer(struct ion_client *client,
 {
 	return -ENODEV;
 }
+
+static inline int msm_ion_secure_table(struct sg_table *table,
+				enum cp_mem_usage usage,
+				int flags)
+{
+	return -ENODEV;
+}
+
+static inline int msm_ion_unsecure_table(struct sg_table *table)
+{
+	return -ENODEV;
+}
+
+
 #endif /* CONFIG_ION */
 
 #endif
