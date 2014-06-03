@@ -76,6 +76,12 @@ static inline long regs_return_value(struct pt_regs *regs)
 
 #define instruction_pointer(regs)	(regs)->ARM_pc
 
+#ifdef CONFIG_THUMB2_KERNEL
+#define frame_pointer(regs) (regs)->ARM_r7
+#else
+#define frame_pointer(regs) (regs)->ARM_fp
+#endif
+
 #ifdef CONFIG_SMP
 extern unsigned long profile_pc(struct pt_regs *regs);
 #else
