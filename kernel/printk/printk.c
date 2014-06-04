@@ -2645,12 +2645,14 @@ int printk_deferred(const char *fmt, ...)
 	va_list args;
 	int r;
 
+	preempt_disable();
 	va_start(args, fmt);
 	r = vprintk_emit(0, SCHED_MESSAGE_LOGLEVEL, NULL, 0, fmt, args);
 	va_end(args);
 
 	__this_cpu_or(printk_pending, PRINTK_PENDING_OUTPUT);
 	irq_work_queue(&__get_cpu_var(wake_up_klogd_work));
+	preempt_enable();
 
 	return r;
 }
