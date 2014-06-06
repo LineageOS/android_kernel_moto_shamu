@@ -2204,9 +2204,6 @@ extern void flush_itimer_signals(void);
 
 extern void do_group_exit(int);
 
-extern int allow_signal(int);
-extern int disallow_signal(int);
-
 extern int do_execve(const char *,
 		     const char __user * const __user *,
 		     const char __user * const __user *);
