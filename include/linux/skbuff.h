@@ -485,7 +485,8 @@ struct sk_buff {
 	 * headers if needed
 	 */
 	__u8			encapsulation:1;
-	/* 6/8 bit hole (depending on ndisc_nodetype presence) */
+	__u8			csum_valid:1;
+	/* 5/7 bit hole (depending on ndisc_nodetype presence) */
 	kmemcheck_bitfield_end(flags2);
 
 #ifdef CONFIG_NET_DMA
@@ -2656,7 +2657,7 @@ __sum16 __skb_checksum_complete(struct sk_buff *skb);
 
 static inline int skb_csum_unnecessary(const struct sk_buff *skb)
 {
-	return skb->ip_summed & CHECKSUM_UNNECESSARY;
+	return ((skb->ip_summed & CHECKSUM_UNNECESSARY) || skb->csum_valid);
 }
 
 /**
@@ -2690,10 +2691,8 @@ static inline bool __skb_checksum_validate_needed(struct sk_buff *skb,
 						  bool zero_okay,
 						  __sum16 check)
 {
-	if (skb_csum_unnecessary(skb)) {
-		return false;
-	} else if (zero_okay && !check) {
-		skb->ip_summed = CHECKSUM_UNNECESSARY;
+	if (skb_csum_unnecessary(skb) || (zero_okay && !check)) {
+		skb->csum_valid = 1;
 		return false;
 	}
 
@@ -2720,15 +2719,20 @@ static inline __sum16 __skb_checksum_validate_complete(struct sk_buff *skb,
 {
 	if (skb->ip_summed == CHECKSUM_COMPLETE) {
 		if (!csum_fold(csum_add(psum, skb->csum))) {
-			skb->ip_summed = CHECKSUM_UNNECESSARY;
+			skb->csum_valid = 1;
 			return 0;
 		}
 	}
 
 	skb->csum = psum;
 
-	if (complete || skb->len <= CHECKSUM_BREAK)
-		return __skb_checksum_complete(skb);
+	if (complete || skb->len <= CHECKSUM_BREAK) {
+		__sum16 csum;
+
+		csum = __skb_checksum_complete(skb);
+		skb->csum_valid = !csum;
+		return csum;
+	}
 
 	return 0;
 }
@@ -2752,6 +2756,7 @@ static inline __wsum null_compute_pseudo(struct sk_buff *skb, int proto)
 				zero_okay, check, compute_pseudo)	\
 ({									\
 	__sum16 __ret = 0;						\
+	skb->csum_valid = 0;						\
 	if (__skb_checksum_validate_needed(skb, zero_okay, check))	\
 		__ret = __skb_checksum_validate_complete(skb,		\
 				complete, compute_pseudo(skb, proto));	\
