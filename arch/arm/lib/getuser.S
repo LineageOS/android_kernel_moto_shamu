@@ -36,7 +36,7 @@ ENTRY(__get_user_1)
 	check_uaccess r0, 1, r1, r2, __get_user_bad
 1: TUSER(ldrb)	r2, [r0]
 	mov	r0, #0
-	mov	pc, lr
+	ret	lr
 ENDPROC(__get_user_1)
 
 ENTRY(__get_user_2)
@@ -56,14 +56,14 @@ rb	.req	r0
 	orr	r2, rb, r2, lsl #8
 #endif
 	mov	r0, #0
-	mov	pc, lr
+	ret	lr
 ENDPROC(__get_user_2)
 
 ENTRY(__get_user_4)
 	check_uaccess r0, 4, r1, r2, __get_user_bad
 4: TUSER(ldr)	r2, [r0]
 	mov	r0, #0
-	mov	pc, lr
+	ret	lr
 ENDPROC(__get_user_4)
 
 ENTRY(__get_user_8)
@@ -98,7 +98,7 @@ __get_user_bad8:
 __get_user_bad:
 	mov	r2, #0
 	mov	r0, #-EFAULT
-	mov	pc, lr
+	ret	lr
 ENDPROC(__get_user_bad)
 ENDPROC(__get_user_bad8)
 
