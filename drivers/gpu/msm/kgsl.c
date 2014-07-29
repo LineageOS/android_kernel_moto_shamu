@@ -3558,7 +3558,7 @@ long kgsl_ioctl_helper(struct file *filep, unsigned int cmd,
 	kgsl_ioctl_func_t func;
 	int ret;
 	char ustack[64];
-	void *uptr = NULL;
+	void *uptr = ustack;
 
 	BUG_ON(dev_priv == NULL);
 
@@ -3567,10 +3567,8 @@ long kgsl_ioctl_helper(struct file *filep, unsigned int cmd,
 
 	nr = _IOC_NR(cmd);
 
-	if (cmd & (IOC_IN | IOC_OUT)) {
-		if (_IOC_SIZE(cmd) < sizeof(ustack))
-			uptr = ustack;
-		else {
+	if (cmd & IOC_INOUT) {
+		if (_IOC_SIZE(cmd) > sizeof(ustack)) {
 			uptr = kzalloc(_IOC_SIZE(cmd), GFP_KERNEL);
 			if (uptr == NULL) {
 				KGSL_MEM_ERR(dev_priv->device,
@@ -3633,7 +3631,7 @@ long kgsl_ioctl_helper(struct file *filep, unsigned int cmd,
 	}
 
 done:
-	if (_IOC_SIZE(cmd) >= sizeof(ustack))
+	if ((cmd & IOC_INOUT) && (uptr != ustack))
 		kfree(uptr);
 
 	return ret;
