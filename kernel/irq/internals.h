@@ -180,3 +180,13 @@ static inline bool irqd_has_set(struct irq_data *d, unsigned int mask)
 {
 	return d->state_use_accessors & mask;
 }
+
+#ifdef CONFIG_PM_SLEEP
+void irq_pm_install_action(struct irq_desc *desc, struct irqaction *action);
+void irq_pm_remove_action(struct irq_desc *desc, struct irqaction *action);
+#else
+static inline void
+irq_pm_install_action(struct irq_desc *desc, struct irqaction *action) { }
+static inline void
+irq_pm_remove_action(struct irq_desc *desc, struct irqaction *action) { }
+#endif
