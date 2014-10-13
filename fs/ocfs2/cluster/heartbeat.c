@@ -2268,7 +2268,7 @@ ssize_t o2hb_heartbeat_group_mode_store(struct o2hb_heartbeat_group *group,
 		return -EINVAL;
 
 	for (i = 0; i < O2HB_HEARTBEAT_NUM_MODES; ++i) {
-		if (strnicmp(page, o2hb_heartbeat_mode_desc[i], len))
+		if (strncasecmp(page, o2hb_heartbeat_mode_desc[i], len))
 			continue;
 
 		ret = o2hb_global_hearbeat_mode_set(i);
