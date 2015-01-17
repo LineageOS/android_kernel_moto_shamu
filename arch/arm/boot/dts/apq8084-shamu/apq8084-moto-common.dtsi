@@ -1127,14 +1127,24 @@
 			qcom,led_mpp_8 {
 				label = "mpp";
 				linux,name = "charging";
-				linux-default-trigger = "none";
+				linux-default-trigger = "battery-charging-blink-full-solid";
 				qcom,default-state = "off";
 				qcom,max-current = <40>;
 				qcom,current-setting = <5>;
 				qcom,id = <6>;
 				qcom,source-sel = <1>;
 				qcom,mode-ctrl = <0x60>;
-				qcom,mode = "manual";
+				qcom,mode = "pwm";
+				qcom,pwm-us = <1000>;
+				qcom,pwm-channel = <0>;
+				qcom,start-idx = <1>;
+				qcom,ramp-step-ms = <120>;
+				qcom,duty-pcts = [00 00 00 00 00
+						  00 00 00 00 00
+						  50 00 00 00 00
+						  00 00 00 00 00
+						  00];
+				qcom,use-blink;
 			};
 		};
 
