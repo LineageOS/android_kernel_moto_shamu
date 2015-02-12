@@ -16,6 +16,24 @@
       "revId": "f82eaca79332548fdaac99c511fc9e7360421631",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bacf61ea_448811e8",
+        "filename": "arch/arm/boot/dts/apq8084-shamu/apq8084-moto-common.dtsi",
+        "patchSetId": 2
+      },
+      "lineNbr": 1129,
+      "author": {
+        "id": 8640
+      },
+      "writtenOn": "2015-02-12T21:54:04Z",
+      "side": 1,
+      "message": "Only in off mode charging. It goes back to none when regular boot. The pwm stuff still isn\u0027t working though.",
+      "parentUuid": "bacf61ea_047e19e4",
+      "revId": "f82eaca79332548fdaac99c511fc9e7360421631",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
