@@ -179,7 +179,7 @@ static int restore_sigregs32(struct pt_regs *regs,_sigregs32 __user *sregs)
 	int err, i;
 
 	/* Alwys make any pending restarted system call return -EINTR */
-	current_thread_info()->restart_block.fn = do_no_restart_syscall;
+	current->restart_block.fn = do_no_restart_syscall;
 
 	err = __copy_from_user(&regs32, &sregs->regs, sizeof(regs32));
 	if (err)

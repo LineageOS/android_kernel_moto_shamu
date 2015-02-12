@@ -36,7 +36,6 @@ struct thread_info {
 
 	mm_segment_t		addr_limit;	/* thread address space
 						   (KERNEL_DS or USER_DS) */
-	struct restart_block	restart_block;
 	struct single_step_state *step_state;	/* single step state
 						   (if non-zero) */
 };
@@ -52,9 +51,6 @@ struct thread_info {
 	.cpu		= 0,			\
 	.preempt_count	= INIT_PREEMPT_COUNT,	\
 	.addr_limit	= KERNEL_DS,		\
-	.restart_block	= {			\
-		.fn = do_no_restart_syscall,	\
-	},					\
 	.step_state	= NULL,			\
 }
 
