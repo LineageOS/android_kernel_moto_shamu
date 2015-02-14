@@ -588,7 +588,7 @@ static void truncate_node(struct dnode_of_data *dn)
 	}
 invalidate:
 	clear_node_page_dirty(dn->node_page);
-	F2FS_SET_SB_DIRT(sbi);
+	set_sbi_flag(sbi, SBI_IS_DIRTY);
 
 	f2fs_put_page(dn->node_page, 1);
 
@@ -1286,7 +1286,7 @@ static int f2fs_write_node_page(struct page *page,
 
 	trace_f2fs_writepage(page, NODE);
 
-	if (unlikely(sbi->por_doing))
+	if (unlikely(is_sbi_flag_set(sbi, SBI_POR_DOING)))
 		goto redirty_out;
 	if (unlikely(f2fs_cp_error(sbi)))
 		goto redirty_out;
@@ -1382,6 +1382,10 @@ static void f2fs_invalidate_node_page(struct page *page, unsigned long offset)
 
 static int f2fs_release_node_page(struct page *page, gfp_t wait)
 {
+	/* If this is dirty page, keep PagePrivate */
+	if (PageDirty(page))
+		return 0;
+
 	ClearPagePrivate(page);
 	return 1;
 }

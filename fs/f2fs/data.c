@@ -818,7 +818,7 @@ static int f2fs_write_data_page(struct page *page,
 
 	zero_user_segment(page, offset, PAGE_CACHE_SIZE);
 write:
-	if (unlikely(sbi->por_doing))
+	if (unlikely(is_sbi_flag_set(sbi, SBI_POR_DOING)))
 		goto redirty_out;
 	if (f2fs_is_drop_cache(inode))
 		goto out;
@@ -1132,6 +1132,10 @@ static void f2fs_invalidate_data_page(struct page *page, unsigned long offset)
 
 static int f2fs_release_data_page(struct page *page, gfp_t wait)
 {
+	/* If this is dirty page, keep PagePrivate */
+	if (PageDirty(page))
+		return 0;
+
 	ClearPagePrivate(page);
 	return 1;
 }
