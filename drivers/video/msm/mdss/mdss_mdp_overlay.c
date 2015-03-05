@@ -2308,7 +2308,8 @@ static ssize_t hbm_show(struct device *dev,
 	}
 
 	return snprintf(buf, PAGE_SIZE, "%d\n",
-			ctl->panel_data->panel_info.hbm_state);
+			ctl->panel_data->panel_info.hbm_off_state ? 1 :
+				ctl->panel_data->panel_info.hbm_state);
 }
 
 static ssize_t hbm_store(struct device *dev,
