@@ -158,7 +158,8 @@ enum dhd_prealloc_index {
 #if defined(STATIC_WL_PRIV_STRUCT)
 	DHD_PREALLOC_WIPHY_ESCAN0 = 5,
 #endif /* STATIC_WL_PRIV_STRUCT */
-	DHD_PREALLOC_DHD_INFO = 7
+	DHD_PREALLOC_DHD_INFO = 7,
+	DHD_PREALLOC_IF_FLOW_LKUP = 9
 };
 
 /* Packet alignment for most efficient SDIO (can change based on platform) */
@@ -863,6 +864,13 @@ extern uint dhd_sdiod_drive_strength;
 
 /* Override to force tx queueing all the time */
 extern uint dhd_force_tx_queueing;
+
+/* Default bcn_timeout value is 4 */
+#define DEFAULT_BCN_TIMEOUT_VALUE        4
+#ifndef CUSTOM_BCN_TIMEOUT_SETTING
+#define CUSTOM_BCN_TIMEOUT_SETTING	DEFAULT_BCN_TIMEOUT_VALUE
+#endif
+
 /* Default KEEP_ALIVE Period is 55 sec to prevent AP from sending Keep Alive probe frame */
 #define DEFAULT_KEEP_ALIVE_VALUE 	55000 /* msec */
 #ifndef CUSTOM_KEEP_ALIVE_SETTING
@@ -894,10 +902,16 @@ extern uint dhd_force_tx_queueing;
 /* hooks for custom PNO Event wake lock to guarantee enough time
 	for the Platform to detect Event before system suspended
 */
-#define DEFAULT_PNO_EVENT_LOCK_xTIME 	2 	/* multiplay of DHD_PACKET_TIMEOUT_MS */
+#define DEFAULT_PNO_EVENT_LOCK_xTIME 	2 	/* multiplier of DHD_PACKET_TIMEOUT_MS */
 #ifndef CUSTOM_PNO_EVENT_LOCK_xTIME
 #define CUSTOM_PNO_EVENT_LOCK_xTIME	 DEFAULT_PNO_EVENT_LOCK_xTIME
 #endif
+
+#define DEFAULT_DHCP_LOCK_xTIME		2 	/* multiplier of DHD_PACKET_TIMEOUT_MS */
+#ifndef CUSTOM_DHCP_LOCK_xTIME
+#define CUSTOM_DHCP_LOCK_xTIME		DEFAULT_DHCP_LOCK_xTIME
+#endif
+
 /* hooks for custom dhd_dpc_prio setting option via Makefile */
 #define DEFAULT_DHP_DPC_PRIO  1
 #ifndef CUSTOM_DPC_PRIO_SETTING

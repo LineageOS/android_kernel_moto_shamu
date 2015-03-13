@@ -90,9 +90,8 @@ typedef struct dhdpcie_info
 	uint16		last_intrstatus;	/* to cache intrstatus */
 	int	irq;
 	char pciname[32];
-
+	struct pci_saved_state* default_state;
 	struct pci_saved_state* state;
-
 } dhdpcie_info_t;
 
 
@@ -167,7 +166,7 @@ static int dhdpcie_set_suspend_resume(struct pci_dev *pdev, bool state)
 	int ret = 0;
 	dhdpcie_info_t *pch = pci_get_drvdata(pdev);
 	dhd_bus_t *bus = NULL;
-	DHD_ERROR(("%s Enter with state :%x\n", __FUNCTION__, state));
+	DHD_INFO(("%s Enter with state :%x\n", __FUNCTION__, state));
 	if (pch) {
 		bus = pch->bus;
 	}
@@ -186,28 +185,30 @@ static int dhdpcie_set_suspend_resume(struct pci_dev *pdev, bool state)
 
 		ret = dhdpcie_bus_suspend(bus, state);
 	}
-	DHD_ERROR(("%s Exit with state :%d\n", __FUNCTION__, ret));
+	DHD_INFO(("%s Exit with state :%d\n", __FUNCTION__, ret));
 	return ret;
 }
 
 static int dhdpcie_pci_suspend(struct pci_dev * pdev, pm_message_t state)
 {
 	BCM_REFERENCE(state);
-	DHD_ERROR(("%s Enter with event %x\n", __FUNCTION__, state.event));
+	DHD_INFO(("%s Enter with event %x\n", __FUNCTION__, state.event));
 	return dhdpcie_set_suspend_resume(pdev, TRUE);
 }
 
 static int dhdpcie_pci_resume(struct pci_dev *pdev)
 {
-	DHD_ERROR(("%s Enter\n", __FUNCTION__));
+	DHD_INFO(("%s Enter\n", __FUNCTION__));
 	return dhdpcie_set_suspend_resume(pdev, FALSE);
 }
 
 static int dhdpcie_suspend_dev(struct pci_dev *dev)
 {
 	int ret;
+	dhdpcie_info_t *pch = pci_get_drvdata(dev);
 	dhdpcie_pme_active(dev, TRUE);
 	pci_save_state(dev);
+	pch->state = pci_store_saved_state(dev);
 	pci_enable_wake(dev, PCI_D0, TRUE);
 	if (pci_is_enabled(dev))
 		pci_disable_device(dev);
@@ -218,6 +219,8 @@ static int dhdpcie_suspend_dev(struct pci_dev *dev)
 static int dhdpcie_resume_dev(struct pci_dev *dev)
 {
 	int err = 0;
+	dhdpcie_info_t *pch = pci_get_drvdata(dev);
+	pci_load_and_free_saved_state(dev, &pch->state);
 	pci_restore_state(dev);
 	err = pci_enable_device(dev);
 	if (err) {
@@ -337,7 +340,7 @@ dhdpcie_detach(dhdpcie_info_t *pch)
 	if (pch) {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0))
 		if (!dhd_download_fw_on_driverload)
-			pci_load_and_free_saved_state(pch->dev, &pch->state);
+			pci_load_and_free_saved_state(pch->dev, &pch->default_state);
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0) */
 		MFREE(osh, pch, sizeof(dhdpcie_info_t));
 	}
@@ -456,9 +459,9 @@ int dhdpcie_get_resource(dhdpcie_info_t *dhdpcie_info)
 			 * in case of built in driver
 			 */
 			pci_save_state(pdev);
-			dhdpcie_info->state = pci_store_saved_state(pdev);
+			dhdpcie_info->default_state = pci_store_saved_state(pdev);
 
-			if (dhdpcie_info->state == NULL) {
+			if (dhdpcie_info->default_state == NULL) {
 				DHD_ERROR(("%s pci_store_saved_state returns NULL\n",
 					__FUNCTION__));
 				REG_UNMAP(dhdpcie_info->regs);
@@ -527,6 +530,7 @@ int dhdpcie_init(struct pci_dev *pdev)
 	osl_t 				*osh = NULL;
 	dhd_bus_t 			*bus = NULL;
 	dhdpcie_info_t		*dhdpcie_info =  NULL;
+	wifi_adapter_info_t	*adapter = NULL;
 	DHD_ERROR(("%s enter\n", __FUNCTION__));
 	do {
 		/* osl attach */
@@ -534,6 +538,14 @@ int dhdpcie_init(struct pci_dev *pdev)
 			DHD_ERROR(("%s: osl_attach failed\n", __FUNCTION__));
 			break;
 		}
+		/* initialize static buffer */
+		adapter = dhd_wifi_platform_get_adapter(PCI_BUS, pdev->bus->number,
+			PCI_SLOT(pdev->devfn));
+		if (adapter != NULL)
+			DHD_ERROR(("%s: found adapter info '%s'\n", __FUNCTION__, adapter->name));
+		else
+			DHD_ERROR(("%s: can't find adapter info for this chip\n", __FUNCTION__));
+		osl_static_mem_init(osh, adapter);
 
 		/*  allocate linux spcific pcie structure here */
 		if (!(dhdpcie_info = MALLOC(osh, sizeof(dhdpcie_info_t)))) {
@@ -771,7 +783,7 @@ dhdpcie_enable_device(dhd_bus_t *bus)
 		return BCME_ERROR;
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0))
-	if (pci_load_saved_state(bus->dev, pch->state))
+	if (pci_load_saved_state(bus->dev, pch->default_state))
 		pci_disable_device(bus->dev);
 	else {
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0) */

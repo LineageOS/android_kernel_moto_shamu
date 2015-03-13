@@ -88,6 +88,10 @@ struct msm_compr_gapless_state {
 	bool use_dsp_gapless_mode;
 };
 
+static unsigned int supported_sample_rates[] = {
+	8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000
+};
+
 struct msm_compr_pdata {
 	atomic_t audio_ocmem_req;
 	struct snd_compr_stream *cstream[MSM_FRONTEND_DAI_MAX];
@@ -157,6 +161,14 @@ struct msm_compr_audio_effects {
 	struct reverb_params reverb;
 	struct eq_params equalizer;
 };
+
+struct mmi_eq_vals {
+	struct mmi_eq_params eq_params;
+	uint32_t num_cmds;
+	uint32_t cmds;
+};
+
+struct mmi_eq_vals mmifx[MSM_FRONTEND_DAI_MAX];
 
 struct msm_compr_dec_params {
 	struct snd_dec_ddp ddp_params;
@@ -730,7 +742,8 @@ static int msm_compr_open(struct snd_compr_stream *cstream)
 	prtd->cstream = cstream;
 	pdata->cstream[rtd->dai_link->be_id] = cstream;
 	pdata->audio_effects[rtd->dai_link->be_id] =
-		 kzalloc(sizeof(struct msm_compr_audio_effects), GFP_KERNEL);
+		kzalloc(sizeof(struct msm_compr_audio_effects), GFP_KERNEL);
+
 	if (!pdata->audio_effects[rtd->dai_link->be_id]) {
 		pr_err("%s: Could not allocate memory for effects\n", __func__);
 		pdata->cstream[rtd->dai_link->be_id] = NULL;
@@ -909,46 +922,16 @@ static int msm_compr_set_params(struct snd_compr_stream *cstream,
 	struct snd_compr_runtime *runtime = cstream->runtime;
 	struct msm_compr_audio *prtd = runtime->private_data;
 	int ret = 0, frame_sz = 0, delay_time_ms = 0;
+	int i, num_rates;
 
 	pr_debug("%s\n", __func__);
 
-	memcpy(&prtd->codec_param, params, sizeof(struct snd_compr_params));
-
-	/* ToDo: remove duplicates */
-	prtd->num_channels = prtd->codec_param.codec.ch_in;
-
-	switch (prtd->codec_param.codec.sample_rate) {
-	case SNDRV_PCM_RATE_8000:
-		prtd->sample_rate = 8000;
-		break;
-	case SNDRV_PCM_RATE_11025:
-		prtd->sample_rate = 11025;
-		break;
-	/* ToDo: What about 12K and 24K sample rates ? */
-	case SNDRV_PCM_RATE_16000:
-		prtd->sample_rate = 16000;
-		break;
-	case SNDRV_PCM_RATE_22050:
-		prtd->sample_rate = 22050;
-		break;
-	case SNDRV_PCM_RATE_32000:
-		prtd->sample_rate = 32000;
-		break;
-	case SNDRV_PCM_RATE_44100:
-		prtd->sample_rate = 44100;
-		break;
-	case SNDRV_PCM_RATE_48000:
-		prtd->sample_rate = 48000;
-		break;
-	case SNDRV_PCM_RATE_96000:
-		prtd->sample_rate = 96000;
-		break;
-	case SNDRV_PCM_RATE_192000:
-		prtd->sample_rate = 192000;
-		break;
-	}
-
-	pr_debug("%s: sample_rate %d\n", __func__, prtd->sample_rate);
+	num_rates = sizeof(supported_sample_rates)/sizeof(unsigned int);
+	for (i = 0; i < num_rates; i++)
+		if (params->codec.sample_rate == supported_sample_rates[i])
+			break;
+	if (i == num_rates)
+		return -EINVAL;
 
 	prtd->compr_passthr = prtd->codec_param.codec.compr_passthr;
 	pr_debug("%s: compr_passthr = %d", __func__, prtd->compr_passthr);
@@ -1027,6 +1010,12 @@ static int msm_compr_set_params(struct snd_compr_stream *cstream,
 			delay_time_ms - PARTIAL_DRAIN_ACK_EARLY_BY_MSEC : 0;
 	prtd->partial_drain_delay = delay_time_ms;
 
+	memcpy(&prtd->codec_param, params, sizeof(struct snd_compr_params));
+
+	/* ToDo: remove duplicates */
+	prtd->num_channels = prtd->codec_param.codec.ch_in;
+	prtd->sample_rate = prtd->codec_param.codec.sample_rate;
+	pr_debug("%s: sample_rate %d\n", __func__, prtd->sample_rate);
 	ret = msm_compr_configure_dsp(cstream);
 
 	return ret;
@@ -1139,6 +1128,15 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 		if (rc)
 			pr_err("%s : Set Volume failed : %d\n",
 				__func__, rc);
+
+		if (mmifx[fe_id].cmds != 0) {
+			pr_debug("%s: Update MMIFX EQ Module params send\n", __func__);
+			msm_audio_effects_mmifx_send_eq_params(prtd->audio_client,
+								&(mmifx[fe_id].eq_params),
+								mmifx[fe_id].cmds);
+			mmifx[fe_id].cmds = 0;
+		}
+
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 		spin_lock_irqsave(&prtd->lock, flags);
@@ -1509,6 +1507,7 @@ static int msm_compr_pointer(struct snd_compr_stream *cstream,
 	uint64_t timestamp = 0;
 	int rc = 0, first_buffer;
 	unsigned long flags;
+	uint32_t gapless_transition;
 
 	pr_debug("%s\n", __func__);
 	memset(&tstamp, 0x0, sizeof(struct snd_compr_tstamp));
@@ -1528,13 +1527,17 @@ static int msm_compr_pointer(struct snd_compr_stream *cstream,
 		return -EINVAL;
 	}
 
+	gapless_transition = prtd->gapless_state.gapless_transition;
 	spin_unlock_irqrestore(&prtd->lock, flags);
 
 	/*
 	 Query timestamp from DSP if some data is with it.
 	 This prevents timeouts.
 	*/
-	if (!first_buffer) {
+	if (!first_buffer || gapless_transition) {
+		if (gapless_transition)
+			pr_debug("session time in gapless transition");
+
 		rc = q6asm_get_session_time(prtd->audio_client, &timestamp);
 		if (rc < 0) {
 			pr_err("%s: Get Session Time return value =%lld\n",
@@ -1690,7 +1693,11 @@ static int msm_compr_get_codec_caps(struct snd_compr_stream *cstream,
 	case SND_AUDIOCODEC_MP3:
 		codec->num_descriptors = 2;
 		codec->descriptor[0].max_ch = 2;
-		codec->descriptor[0].sample_rates = SNDRV_PCM_RATE_8000_48000;
+		memcpy(codec->descriptor[0].sample_rates,
+		       supported_sample_rates,
+		       sizeof(supported_sample_rates));
+		codec->descriptor[0].num_sample_rates =
+			sizeof(supported_sample_rates)/sizeof(unsigned int);
 		codec->descriptor[0].bit_rate[0] = 320; /* 320kbps */
 		codec->descriptor[0].bit_rate[1] = 128;
 		codec->descriptor[0].num_bitrates = 2;
@@ -1701,7 +1708,11 @@ static int msm_compr_get_codec_caps(struct snd_compr_stream *cstream,
 	case SND_AUDIOCODEC_AAC:
 		codec->num_descriptors = 2;
 		codec->descriptor[1].max_ch = 2;
-		codec->descriptor[1].sample_rates = SNDRV_PCM_RATE_8000_48000;
+		memcpy(codec->descriptor[1].sample_rates,
+		       supported_sample_rates,
+		       sizeof(supported_sample_rates));
+		codec->descriptor[1].num_sample_rates =
+			sizeof(supported_sample_rates)/sizeof(unsigned int);
 		codec->descriptor[1].bit_rate[0] = 320; /* 320kbps */
 		codec->descriptor[1].bit_rate[1] = 128;
 		codec->descriptor[1].num_bitrates = 2;
@@ -1805,6 +1816,70 @@ static int msm_compr_volume_get(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int msm_audio_effects_mmifx_params(struct mmi_eq_vals *mmifx_eq,
+					long *values)
+{
+	int devices = *values++;
+	int num_commands = *values++;
+	uint32_t params_length = (MAX_INBAND_PARAM_SZ);
+	int rc = 0;
+	int i;
+	struct mmi_eq_params *mmifx = &(mmifx_eq->eq_params);
+
+	pr_debug("%s: device: %d num commands %d\n", __func__, devices, num_commands);
+	mmifx_eq->num_cmds = num_commands;
+	params_length = 0;
+	for (i = 0; i < num_commands; i++) {
+		uint32_t command_id = *values++;
+		/*command_config_state */
+		uint32_t command_config_state = *values++;
+		uint32_t index_offset = *values++;
+		uint32_t length = *values++;
+		switch (command_id) {
+		case MMIFX_EQ_ENABLE:
+			pr_debug("%s: MMIFX_EQ_ENABLE\n", __func__);
+			if (length != 1 || index_offset != 0) {
+				pr_err("no valid params\n");
+				rc = -EINVAL;
+				goto invalid_config;
+			}
+			mmifx->enable_flag = *values++;
+			mmifx_eq->cmds |= command_id;
+			break;
+		case MMIFX_EQ_DEVICE:
+			pr_debug("%s: MMIFX_DEVICE\n", __func__);
+			if (length != 1 || index_offset != 0) {
+				pr_err("no valid params\n");
+				rc = -EINVAL;
+				goto invalid_config;
+			}
+			if (command_config_state == CONFIG_SET) {
+				mmifx->device = devices;
+				mmifx_eq->cmds |= command_id;
+			}
+			break;
+		case MMIFX_EQ_PRESET:
+			pr_debug("%s: MMIFX_EQ_PRESET\n", __func__);
+			if (length != 1 || index_offset != 0) {
+				pr_err("no valid params\n");
+				rc = -EINVAL;
+				goto invalid_config;
+			}
+			if (command_config_state == CONFIG_SET) {
+				mmifx->preset= *values++;
+				mmifx_eq->cmds |= command_id;
+			}
+			break;
+		default:
+			pr_err("%s: Invalid command to set config\n", __func__);
+			break;
+		}
+	}
+
+invalid_config:
+	return rc;
+}
+
 static int msm_compr_audio_effects_config_put(struct snd_kcontrol *kcontrol,
 					   struct snd_ctl_elem_value *ucontrol)
 {
@@ -1819,6 +1894,7 @@ static int msm_compr_audio_effects_config_put(struct snd_kcontrol *kcontrol,
 	int effects_module;
 
 	pr_debug("%s\n", __func__);
+	effects_module = *values++;
 	if (fe_id >= MSM_FRONTEND_DAI_MAX) {
 		pr_err("%s Received out of bounds fe_id %lu\n",
 			__func__, fe_id);
@@ -1826,13 +1902,23 @@ static int msm_compr_audio_effects_config_put(struct snd_kcontrol *kcontrol,
 	}
 	cstream = pdata->cstream[fe_id];
 	audio_effects = pdata->audio_effects[fe_id];
-	if (!cstream || !audio_effects) {
-		pr_err("%s: stream or effects inactive\n", __func__);
+	if (!cstream || !audio_effects || !cstream->runtime) {
+		pr_err("%s: stream or effects inactive %ld\n", __func__, fe_id);
+		if (effects_module == MMIFX_EQ_MODULE)
+			/* update mmfx params, will be set when compr
+			 * session is started
+			 */
+			msm_audio_effects_mmifx_params(&(mmifx[fe_id]),
+						     values);
 		return -EINVAL;
 	}
+
 	prtd = cstream->runtime->private_data;
 	if (!prtd) {
 		pr_err("%s: cannot set audio effects\n", __func__);
+		if (effects_module == MMIFX_EQ_MODULE)
+			msm_audio_effects_mmifx_params(&(mmifx[fe_id]),
+						     values);
 		return -EINVAL;
 	}
 	if (prtd->compr_passthr != LEGACY_PCM) {
@@ -1843,7 +1929,7 @@ static int msm_compr_audio_effects_config_put(struct snd_kcontrol *kcontrol,
 		pr_debug("%s: Effects supported for compr_type[%d]\n",
 			 __func__, prtd->compr_passthr);
 	}
-	effects_module = *values++;
+
 	switch (effects_module) {
 	case VIRTUALIZER_MODULE:
 		pr_debug("%s: VIRTUALIZER_MODULE\n", __func__);
@@ -1868,6 +1954,17 @@ static int msm_compr_audio_effects_config_put(struct snd_kcontrol *kcontrol,
 		msm_audio_effects_popless_eq_handler(prtd->audio_client,
 						    &(audio_effects->equalizer),
 						     values);
+		break;
+	case MMIFX_EQ_MODULE:
+		pr_debug("%s: MMIFX EQ Module\n", __func__);
+		msm_audio_effects_mmifx_params(&(mmifx[fe_id]),
+						     values);
+		if (atomic_read(&prtd->start)) {
+			msm_audio_effects_mmifx_send_eq_params(prtd->audio_client,
+							   &(mmifx[fe_id].eq_params),
+								mmifx[fe_id].cmds);
+			mmifx[fe_id].cmds = 0;
+		}
 		break;
 	default:
 		pr_err("%s Invalid effects config module\n", __func__);
@@ -2030,10 +2127,10 @@ static int msm_compr_probe(struct snd_soc_platform *platform)
 	/*
 	 * use_dsp_gapless_mode part of platform data(pdata) is updated from HAL
 	 * through a mixer control before compress driver is opened. The mixer
-	 * control is used to decide if dsp gapless mode needs to be enabled.
-	 * Gapless is disabled by default.
+	 * control is used to decide if dsp gapless mode needs to be
+	 * enabled/disabled. Gapless is enabled by default.
 	 */
-	pdata->use_dsp_gapless_mode = false;
+	pdata->use_dsp_gapless_mode = true;
 	return 0;
 }
 

@@ -4145,6 +4145,9 @@ struct asm_stream_cmd_open_write_v3 {
 /* Absolute timestamp is identified by this value.*/
 #define ASM_ABSOLUTEIMESTAMP      1
 
+/* Bit value for Low Latency Tx stream subfield */
+#define ASM_LOW_LATENCY_TX_STREAM_SESSION			1
+
 /* Bit shift for the stream_perf_mode subfield. */
 #define ASM_SHIFT_STREAM_PERF_MODE_FLAG_IN_OPEN_READ              29
 
@@ -5042,6 +5045,21 @@ struct Audio_AigParam {
 /* The waiting time before which AIG starts to apply adaptive
  * gain update Q32.0 Byte offset: 32
  */
+
+} __packed;
+
+#define AUDPROC_MODULE_ID_MMIFX				(0x1000E0B0)
+#define AUDPROC_PARAM_ID_MMIFX_ENABLE (0x1000E3B0)
+#define AUDPROC_PARAM_ID_MMIFX_PRESET (0x1000E3A0)
+#define AUDPROC_PARAM_ID_MMIFX_TABLE (0x1000E300)
+#define AUDPROC_PARAM_ID_MMIFX_DEVICE (0x1000E310)
+
+struct asm_mmfx_enable_config {
+	struct apr_hdr	hdr;
+	struct asm_stream_cmd_set_pp_params_v2 param;
+	struct asm_stream_param_data_v2 data;
+	uint32_t                  enable_flag;
+/*< Specifies whether mmfx eq is disabled (0) or enabled (nonzero).*/
 
 } __packed;
 

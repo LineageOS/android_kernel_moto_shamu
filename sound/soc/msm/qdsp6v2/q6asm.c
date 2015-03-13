@@ -1768,7 +1768,7 @@ static int __q6asm_open_read(struct audio_client *ac,
 	open.mode_flags = 0x0;
 
 	if (ac->perf_mode == LOW_LATENCY_PCM_MODE) {
-		open.mode_flags |= ASM_LOW_LATENCY_STREAM_SESSION <<
+		open.mode_flags |= ASM_LOW_LATENCY_TX_STREAM_SESSION <<
 				ASM_SHIFT_STREAM_PERF_MODE_FLAG_IN_OPEN_READ;
 	} else {
 		open.mode_flags |= ASM_LEGACY_STREAM_SESSION <<
@@ -3687,6 +3687,54 @@ int q6asm_set_volume(struct audio_client *ac, int volume)
 	if (!rc) {
 		pr_err("%s: timeout, set-params paramid[0x%x]\n", __func__,
 						vol.data.param_id);
+		rc = -EINVAL;
+		goto fail_cmd;
+	}
+	rc = 0;
+fail_cmd:
+	return rc;
+}
+
+int q6asm_mmfxeq(struct audio_client *ac, uint32_t enable)
+{
+	struct asm_mmfx_enable_config cfg;
+	int sz = 0;
+	int rc  = 0;
+
+	if (!ac || ac->apr == NULL) {
+		pr_err("%s: APR handle NULL\n", __func__);
+		rc = -EINVAL;
+		goto fail_cmd;
+	}
+	pr_info("%s: value %d\n", __func__, enable);
+	sz = sizeof(struct asm_mmfx_enable_config);
+	q6asm_add_hdr_async(ac, &cfg.hdr, sz, TRUE);
+	atomic_set(&ac->cmd_state, 1);
+	cfg.hdr.opcode = ASM_STREAM_CMD_SET_PP_PARAMS_V2;
+	cfg.param.data_payload_addr_lsw = 0;
+	cfg.param.data_payload_addr_msw = 0;
+	cfg.param.mem_map_handle = 0;
+	cfg.param.data_payload_size = sizeof(cfg) -
+				sizeof(cfg.hdr) - sizeof(cfg.param);
+	cfg.data.module_id = AUDPROC_MODULE_ID_MMIFX;
+	cfg.data.param_id = AUDPROC_PARAM_ID_MMIFX_ENABLE;
+	cfg.data.param_size = cfg.param.data_payload_size - sizeof(cfg.data);
+	cfg.data.reserved = 0;
+	cfg.enable_flag = enable;
+
+	rc = apr_send_pkt(ac->apr, (uint32_t *) &cfg);
+	if (rc < 0) {
+		pr_err("%s: set-params send failed paramid[0x%x]\n", __func__,
+						cfg.data.param_id);
+		rc = -EINVAL;
+		goto fail_cmd;
+	}
+
+	rc = wait_event_timeout(ac->cmd_wait,
+			(atomic_read(&ac->cmd_state) == 0), 5*HZ);
+	if (!rc) {
+		pr_err("%s: timeout, set-params paramid[0x%x]\n", __func__,
+						cfg.data.param_id);
 		rc = -EINVAL;
 		goto fail_cmd;
 	}
