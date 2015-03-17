@@ -365,7 +365,7 @@ static void msm_dt_free_map(struct pinctrl_dev *pctldev,
 	for (idx = 0; idx < num_maps; idx++) {
 		if (map[idx].type == PIN_MAP_TYPE_CONFIGS_GROUP)
 			kfree(map[idx].data.configs.configs);
-		else if (map->type == PIN_MAP_TYPE_MUX_GROUP)
+		else if (map[idx].type == PIN_MAP_TYPE_MUX_GROUP)
 			kfree(map[idx].data.mux.function);
 	};
 
