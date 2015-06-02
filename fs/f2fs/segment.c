@@ -362,10 +362,15 @@ void f2fs_balance_fs(struct f2fs_sb_info *sbi)
 void f2fs_balance_fs_bg(struct f2fs_sb_info *sbi)
 {
 	/* try to shrink extent cache when there is no enough memory */
-	f2fs_shrink_extent_tree(sbi, EXTENT_CACHE_SHRINK_NUMBER);
+	if (!available_free_memory(sbi, EXTENT_CACHE))
+		f2fs_shrink_extent_tree(sbi, EXTENT_CACHE_SHRINK_NUMBER);
 
-	/* check the # of cached NAT entries and prefree segments */
-	if (try_to_free_nats(sbi, NAT_ENTRY_PER_BLOCK) ||
+	/* check the # of cached NAT entries */
+	if (!available_free_memory(sbi, NAT_ENTRIES))
+		try_to_free_nats(sbi, NAT_ENTRY_PER_BLOCK);
+
+	/* checkpoint is the only way to shrink partial cached entries */
+	if (!available_free_memory(sbi, NAT_ENTRIES) ||
 			excess_prefree_segs(sbi) ||
 			!available_free_memory(sbi, INO_ENTRIES))
 		f2fs_sync_fs(sbi->sb, true);
@@ -603,7 +608,6 @@ static void __add_discard_entry(struct f2fs_sb_info *sbi,
 	list_add_tail(&new->list, head);
 done:
 	SM_I(sbi)->nr_discards += end - start;
-	cpc->trimmed += end - start;
 }
 
 static void add_discard_addrs(struct f2fs_sb_info *sbi, struct cp_control *cpc)
@@ -705,6 +709,7 @@ void clear_prefree_segments(struct f2fs_sb_info *sbi, struct cp_control *cpc)
 		if (cpc->reason == CP_DISCARD && entry->len < cpc->trim_minlen)
 			goto skip;
 		f2fs_issue_discard(sbi, entry->blkaddr, entry->len);
+		cpc->trimmed += entry->len;
 skip:
 		list_del(&entry->list);
 		SM_I(sbi)->nr_discards -= entry->len;
@@ -1361,7 +1366,8 @@ void rewrite_data_page(struct f2fs_io_info *fio)
 	f2fs_submit_page_mbio(fio);
 }
 
-void f2fs_replace_block(struct f2fs_sb_info *sbi, struct f2fs_summary *sum,
+static void __f2fs_replace_block(struct f2fs_sb_info *sbi,
+				struct f2fs_summary *sum,
 				block_t old_blkaddr, block_t new_blkaddr,
 				bool recover_curseg)
 {
@@ -1419,6 +1425,21 @@ void f2fs_replace_block(struct f2fs_sb_info *sbi, struct f2fs_summary *sum,
 
 	mutex_unlock(&sit_i->sentry_lock);
 	mutex_unlock(&curseg->curseg_mutex);
+}
+
+void f2fs_replace_block(struct f2fs_sb_info *sbi, struct dnode_of_data *dn,
+				block_t old_addr, block_t new_addr,
+				unsigned char version, bool recover_curseg)
+{
+	struct f2fs_summary sum;
+
+	set_summary(&sum, dn->nid, dn->ofs_in_node, version);
+
+	__f2fs_replace_block(sbi, &sum, old_addr, new_addr, recover_curseg);
+
+	dn->data_blkaddr = new_addr;
+	set_data_blkaddr(dn);
+	f2fs_update_extent_cache(dn);
 }
 
 static inline bool is_merged_page(struct f2fs_sb_info *sbi,

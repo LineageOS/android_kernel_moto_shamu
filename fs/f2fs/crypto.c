@@ -48,9 +48,8 @@
 
 /* Encryption added and removed here! (L: */
 
+static unsigned int num_prealloc_crypto_pages = 32;
 static unsigned int num_prealloc_crypto_ctxs = 128;
-static unsigned int num_prealloc_crypto_pages = BIO_MAX_PAGES;
-static unsigned int num_prealloc_emergent_pages = 32;
 
 module_param(num_prealloc_crypto_pages, uint, 0444);
 MODULE_PARM_DESC(num_prealloc_crypto_pages,
@@ -59,7 +58,7 @@ module_param(num_prealloc_crypto_ctxs, uint, 0444);
 MODULE_PARM_DESC(num_prealloc_crypto_ctxs,
 		"Number of crypto contexts to preallocate");
 
-static mempool_t *f2fs_bounce_page_pool, *f2fs_emergent_page_pool;
+static mempool_t *f2fs_bounce_page_pool;
 
 static LIST_HEAD(f2fs_free_crypto_ctxs);
 static DEFINE_SPINLOCK(f2fs_crypto_ctx_lock);
@@ -84,13 +83,7 @@ void f2fs_release_crypto_ctx(struct f2fs_crypto_ctx *ctx)
 	unsigned long flags;
 
 	if (ctx->flags & F2FS_WRITE_PATH_FL && ctx->w.bounce_page) {
-		if (ctx->flags & F2FS_BOUNCE_PAGE_POOL_FREE_ENCRYPT_FL)
-			mempool_free(ctx->w.bounce_page, f2fs_bounce_page_pool);
-		else if (ctx->flags & F2FS_EMERGENT_PAGE_POOL_FREE_ENCRYPT_FL)
-			mempool_free(ctx->w.bounce_page,
-					f2fs_emergent_page_pool);
-		else
-			__free_page(ctx->w.bounce_page);
+		mempool_free(ctx->w.bounce_page, f2fs_bounce_page_pool);
 		ctx->w.bounce_page = NULL;
 	}
 	ctx->w.control_page = NULL;
@@ -119,7 +112,7 @@ struct f2fs_crypto_ctx *f2fs_get_crypto_ctx(struct inode *inode)
 	struct f2fs_crypt_info *ci = F2FS_I(inode)->i_crypt_info;
 
 	if (ci == NULL)
-		return ERR_PTR(-EACCES);
+		return ERR_PTR(-ENOKEY);
 
 	/*
 	 * We first try getting the ctx from a free list because in
@@ -193,9 +186,6 @@ static void f2fs_crypto_destroy(void)
 	if (f2fs_bounce_page_pool)
 		mempool_destroy(f2fs_bounce_page_pool);
 	f2fs_bounce_page_pool = NULL;
-	if (f2fs_emergent_page_pool)
-		mempool_destroy(f2fs_emergent_page_pool);
-	f2fs_emergent_page_pool = NULL;
 }
 
 /**
@@ -230,11 +220,6 @@ int f2fs_crypto_initialize(void)
 	f2fs_bounce_page_pool =
 		mempool_create_page_pool(num_prealloc_crypto_pages, 0);
 	if (!f2fs_bounce_page_pool)
-		goto fail;
-
-	f2fs_emergent_page_pool =
-		mempool_create_page_pool(num_prealloc_emergent_pages, 0);
-	if (!f2fs_emergent_page_pool)
 		goto fail;
 
 already_initialized:
@@ -391,6 +376,15 @@ static int f2fs_page_crypto(struct f2fs_crypto_ctx *ctx,
 	return 0;
 }
 
+static struct page *alloc_bounce_page(struct f2fs_crypto_ctx *ctx)
+{
+	ctx->w.bounce_page = mempool_alloc(f2fs_bounce_page_pool, GFP_NOWAIT);
+	if (ctx->w.bounce_page == NULL)
+		return ERR_PTR(-ENOMEM);
+	ctx->flags |= F2FS_WRITE_PATH_FL;
+	return ctx->w.bounce_page;
+}
+
 /**
  * f2fs_encrypt() - Encrypts a page
  * @inode:          The inode for which the encryption should take place
@@ -420,40 +414,25 @@ struct page *f2fs_encrypt(struct inode *inode,
 		return (struct page *)ctx;
 
 	/* The encryption operation will require a bounce page. */
-	ctx->flags &= ~F2FS_MASK_PAGE_POOL_FREE_ENCRYPT_FL;
+	ciphertext_page = alloc_bounce_page(ctx);
+	if (IS_ERR(ciphertext_page))
+		goto err_out;
 
-	ciphertext_page = mempool_alloc(f2fs_bounce_page_pool, GFP_NOFS);
-	if (ciphertext_page) {
-		ctx->flags |= F2FS_BOUNCE_PAGE_POOL_FREE_ENCRYPT_FL;
-		goto got_it;
-	}
-
-	ciphertext_page = alloc_page(GFP_NOFS);
-	if (!ciphertext_page) {
-		/*
-		 * This is a potential bottleneck, but at least we'll have
-		 * forward progress.
-		 */
-		ciphertext_page = mempool_alloc(f2fs_emergent_page_pool,
-								GFP_NOFS);
-		if (WARN_ON_ONCE(!ciphertext_page))
-			ciphertext_page = mempool_alloc(f2fs_emergent_page_pool,
-						GFP_NOFS | __GFP_NOFAIL);
-		ctx->flags |= F2FS_EMERGENT_PAGE_POOL_FREE_ENCRYPT_FL;
-	}
-got_it:
-	ctx->flags |= F2FS_WRITE_PATH_FL;
-	ctx->w.bounce_page = ciphertext_page;
 	ctx->w.control_page = plaintext_page;
 	err = f2fs_page_crypto(ctx, inode, F2FS_ENCRYPT, plaintext_page->index,
 					plaintext_page, ciphertext_page);
 	if (err) {
-		f2fs_release_crypto_ctx(ctx);
-		return ERR_PTR(err);
+		ciphertext_page = ERR_PTR(err);
+		goto err_out;
 	}
+
 	SetPagePrivate(ciphertext_page);
 	set_page_private(ciphertext_page, (unsigned long)ctx);
 	lock_page(ciphertext_page);
+	return ciphertext_page;
+
+err_out:
+	f2fs_release_crypto_ctx(ctx);
 	return ciphertext_page;
 }
 
@@ -485,8 +464,8 @@ int f2fs_decrypt_one(struct inode *inode, struct page *page)
 	struct f2fs_crypto_ctx *ctx = f2fs_get_crypto_ctx(inode);
 	int ret;
 
-	if (!ctx)
-		return -ENOMEM;
+	if (IS_ERR(ctx))
+		return PTR_ERR(ctx);
 	ret = f2fs_decrypt(ctx, page);
 	f2fs_release_crypto_ctx(ctx);
 	return ret;
