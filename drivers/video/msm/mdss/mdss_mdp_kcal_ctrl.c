@@ -109,23 +109,21 @@ static ssize_t kcal_min_show(struct device *dev,
 static ssize_t kcal_enable_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
-	int kcal_enable;
+	int kcal_enable, r;
 	struct kcal_lut_data *lut_data = dev_get_drvdata(dev);
 
-	if (count != 2)
+	if (!lut_data)
+		return -ENODEV;
+
+	r = kstrtoint(buf, 0, &kcal_enable);
+	if ((r) || ((kcal_enable != 0) && (kcal_enable != 1)))
 		return -EINVAL;
 
-	sscanf(buf, "%d", &kcal_enable);
+	if (lut_data->enable != kcal_enable) {
+		lut_data->enable = kcal_enable;
 
-	if (kcal_enable != 0 && kcal_enable != 1)
-		return -EINVAL;
-
-	if (lut_data->enable == kcal_enable)
-		return -EINVAL;
-
-	lut_data->enable = kcal_enable;
-
-	mdss_mdp_pp_kcal_update(lut_data);
+		mdss_mdp_pp_kcal_update(lut_data);
+	}
 
 	return count;
 }
