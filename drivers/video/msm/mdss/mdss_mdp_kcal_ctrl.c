@@ -121,7 +121,7 @@ static ssize_t kcal_enable_store(struct device *dev,
 		return -EINVAL;
 
 	if (lut_data->enable == kcal_enable)
-		return -EINVAL;
+		return count;
 
 	lut_data->enable = kcal_enable;
 
