@@ -939,8 +939,7 @@ void send_adm_custom_topology(int port_id)
 
 	adm_top.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
 		APR_HDR_LEN(20), APR_PKT_VER);
-	adm_top.hdr.pkt_size = APR_PKT_SIZE(APR_HDR_SIZE,
-		sizeof(adm_top));
+	adm_top.hdr.pkt_size = sizeof(adm_top);
 	adm_top.hdr.src_svc = APR_SVC_ADM;
 	adm_top.hdr.src_domain = APR_DOMAIN_APPS;
 	adm_top.hdr.src_port = port_id;
