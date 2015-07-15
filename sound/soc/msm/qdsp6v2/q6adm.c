@@ -986,8 +986,7 @@ static int send_adm_cal_block(int port_id, struct acdb_cal_block *aud_cal,
 
 	adm_params.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
 		APR_HDR_LEN(20), APR_PKT_VER);
-	adm_params.hdr.pkt_size = APR_PKT_SIZE(APR_HDR_SIZE,
-		sizeof(adm_params));
+	adm_params.hdr.pkt_size = sizeof(adm_params);
 	adm_params.hdr.src_svc = APR_SVC_ADM;
 	adm_params.hdr.src_domain = APR_DOMAIN_APPS;
 	adm_params.hdr.src_port = port_id;
