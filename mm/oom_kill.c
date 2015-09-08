@@ -654,7 +654,6 @@ bool out_of_memory(struct zonelist *zonelist, gfp_t gfp_mask,
 	unsigned long freed = 0;
 	unsigned int uninitialized_var(points);
 	enum oom_constraint constraint = CONSTRAINT_NONE;
-	int killed = 0;
 
 	if (oom_killer_disabled)
 		return false;
@@ -662,7 +661,7 @@ bool out_of_memory(struct zonelist *zonelist, gfp_t gfp_mask,
 	blocking_notifier_call_chain(&oom_notify_list, 0, &freed);
 	if (freed > 0)
 		/* Got some memory back in the last second. */
-		goto out;
+		return true;
 
 	/*
 	 * If current has a pending SIGKILL or is exiting, then automatically
@@ -675,7 +674,7 @@ bool out_of_memory(struct zonelist *zonelist, gfp_t gfp_mask,
 	if (current->mm &&
 	    (fatal_signal_pending(current) || task_will_free_mem(current))) {
 		mark_oom_victim(current);
-		goto out;
+		return true;
 	}
 
 	/*
@@ -694,7 +693,7 @@ bool out_of_memory(struct zonelist *zonelist, gfp_t gfp_mask,
 		oom_kill_process(current, gfp_mask, order, 0, totalpages, NULL,
 				 nodemask,
 				 "Out of memory (oom_kill_allocating_task)");
-		goto out;
+		return true;
 	}
 
 	p = select_bad_process(&points, totalpages, mpol_mask, force_kill);
@@ -706,16 +705,12 @@ bool out_of_memory(struct zonelist *zonelist, gfp_t gfp_mask,
 	if (PTR_ERR(p) != -1UL) {
 		oom_kill_process(p, gfp_mask, order, points, totalpages, NULL,
 				 nodemask, "Out of memory");
-		killed = 1;
-	}
-out:
-	/*
-	 * Give the killed threads a good chance of exiting before trying to
-	 * allocate memory again.
-	 */
-	if (killed)
+		/*
+		 * Give the killed process a good chance to exit before trying
+		 * to allocate memory again.
+		 */
 		schedule_timeout_killable(1);
-
+	}
 	return true;
 }
 
