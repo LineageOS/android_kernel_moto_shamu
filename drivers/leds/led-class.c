@@ -60,6 +60,25 @@ static ssize_t led_brightness_store(struct device *dev,
 	return size;
 }
 
+static ssize_t led_blink_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	unsigned long delay_on, delay_off;
+
+	if (sscanf(buf, "%lu,%lu", &delay_on, &delay_off) != 2) {
+		printk("Malformed LED blink arguments: %s\n", buf);
+		return -EINVAL;
+	}
+
+	if (delay_on == 0 && delay_off == 0)
+		led_stop_software_blink(led_cdev);
+	else
+		led_blink_set(led_cdev, &delay_on, &delay_off);
+
+	return size;
+}
+
 static ssize_t led_max_brightness_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
@@ -94,6 +113,7 @@ static struct device_attribute led_class_attrs[] = {
 #ifdef CONFIG_LEDS_TRIGGERS
 	__ATTR(trigger, 0644, led_trigger_show, led_trigger_store),
 #endif
+	__ATTR(blink, 0644, NULL, led_blink_store),
 	__ATTR_NULL,
 };
 
