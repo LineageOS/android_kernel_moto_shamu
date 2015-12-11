@@ -605,6 +605,8 @@ void oom_kill_process(struct task_struct *p, gfp_t gfp_mask, int order,
 			continue;
 		if (unlikely(p->flags & PF_KTHREAD))
 			continue;
+		if (is_global_init(p))
+			continue;
 		if (p->signal->oom_score_adj == OOM_SCORE_ADJ_MIN)
 			continue;
 
