@@ -88,6 +88,21 @@ struct llist_node *llist_reverse_order(struct llist_node *head)
 #define list_last_entry(ptr, type, member) \
 	list_entry((ptr)->prev, type, member)
 
+static unsigned long __reverse_ulong(unsigned char *str)
+{
+	unsigned long tmp = 0;
+	int shift = 24, idx = 0;
+
+#if BITS_PER_LONG == 64
+	shift = 56;
+#endif
+	while (shift >= 0) {
+		tmp |= (unsigned long)str[idx++] << shift;
+		shift -= BITS_PER_BYTE;
+	}
+	return tmp;
+}
+
 /*
  * __reverse_ffs is copied from include/asm-generic/bitops/__ffs.h since
  * MSB and LSB are reversed in a byte by f2fs_set_bit.
@@ -97,27 +112,31 @@ static inline unsigned long __reverse_ffs(unsigned long word)
 	int num = 0;
 
 #if BITS_PER_LONG == 64
-	if ((word & 0xffffffff) == 0) {
+	if ((word & 0xffffffff00000000UL) == 0)
 		num += 32;
+	else
 		word >>= 32;
-	}
 #endif
-	if ((word & 0xffff) == 0) {
+	if ((word & 0xffff0000) == 0)
 		num += 16;
+	else
 		word >>= 16;
-	}
-	if ((word & 0xff) == 0) {
+
+	if ((word & 0xff00) == 0)
 		num += 8;
+	else
 		word >>= 8;
-	}
+
 	if ((word & 0xf0) == 0)
 		num += 4;
 	else
 		word >>= 4;
+
 	if ((word & 0xc) == 0)
 		num += 2;
 	else
 		word >>= 2;
+
 	if ((word & 0x2) == 0)
 		num += 1;
 	return num;
@@ -127,26 +146,16 @@ static inline unsigned long __reverse_ffs(unsigned long word)
  * __find_rev_next(_zero)_bit is copied from lib/find_next_bit.c because
  * f2fs_set_bit makes MSB and LSB reversed in a byte.
  * Example:
- *                             LSB <--> MSB
- *   f2fs_set_bit(0, bitmap) => 0000 0001
- *   f2fs_set_bit(7, bitmap) => 1000 0000
+ *                             MSB <--> LSB
+ *   f2fs_set_bit(0, bitmap) => 1000 0000
+ *   f2fs_set_bit(7, bitmap) => 0000 0001
  */
 static unsigned long __find_rev_next_bit(const unsigned long *addr,
 			unsigned long size, unsigned long offset)
 {
-	while (!f2fs_test_bit(offset, (unsigned char *)addr))
-		offset++;
-
-	if (offset > size)
-		offset = size;
-
-	return offset;
-#if 0
 	const unsigned long *p = addr + BIT_WORD(offset);
 	unsigned long result = offset & ~(BITS_PER_LONG - 1);
 	unsigned long tmp;
-	unsigned long mask, submask;
-	unsigned long quot, rest;
 
 	if (offset >= size)
 		return size;
@@ -156,14 +165,9 @@ static unsigned long __find_rev_next_bit(const unsigned long *addr,
 	if (!offset)
 		goto aligned;
 
-	tmp = *(p++);
-	quot = (offset >> 3) << 3;
-	rest = offset & 0x7;
-	mask = ~0UL << quot;
-	submask = (unsigned char)(0xff << rest) >> rest;
-	submask <<= quot;
-	mask &= submask;
-	tmp &= mask;
+	tmp = __reverse_ulong((unsigned char *)p);
+	tmp &= ~0UL >> offset;
+
 	if (size < BITS_PER_LONG)
 		goto found_first;
 	if (tmp)
@@ -171,42 +175,34 @@ static unsigned long __find_rev_next_bit(const unsigned long *addr,
 
 	size -= BITS_PER_LONG;
 	result += BITS_PER_LONG;
+	p++;
 aligned:
 	while (size & ~(BITS_PER_LONG-1)) {
-		tmp = *(p++);
+		tmp = __reverse_ulong((unsigned char *)p);
 		if (tmp)
 			goto found_middle;
 		result += BITS_PER_LONG;
 		size -= BITS_PER_LONG;
+		p++;
 	}
 	if (!size)
 		return result;
-	tmp = *p;
+
+	tmp = __reverse_ulong((unsigned char *)p);
 found_first:
-	tmp &= (~0UL >> (BITS_PER_LONG - size));
-	if (tmp == 0UL)		/* Are any bits set? */
+	tmp &= (~0UL << (BITS_PER_LONG - size));
+	if (!tmp)		/* Are any bits set? */
 		return result + size;   /* Nope. */
 found_middle:
 	return result + __reverse_ffs(tmp);
-#endif
 }
 
 static unsigned long __find_rev_next_zero_bit(const unsigned long *addr,
 			unsigned long size, unsigned long offset)
 {
-	while (f2fs_test_bit(offset, (unsigned char *)addr))
-		offset++;
-
-	if (offset > size)
-		offset = size;
-
-	return offset;
-#if 0
 	const unsigned long *p = addr + BIT_WORD(offset);
 	unsigned long result = offset & ~(BITS_PER_LONG - 1);
 	unsigned long tmp;
-	unsigned long mask, submask;
-	unsigned long quot, rest;
 
 	if (offset >= size)
 		return size;
@@ -216,40 +212,36 @@ static unsigned long __find_rev_next_zero_bit(const unsigned long *addr,
 	if (!offset)
 		goto aligned;
 
-	tmp = *(p++);
-	quot = (offset >> 3) << 3;
-	rest = offset & 0x7;
-	mask = ~(~0UL << quot);
-	submask = (unsigned char)~((unsigned char)(0xff << rest) >> rest);
-	submask <<= quot;
-	mask += submask;
-	tmp |= mask;
+	tmp = __reverse_ulong((unsigned char *)p);
+	tmp |= ~((~0UL << offset) >> offset);
+
 	if (size < BITS_PER_LONG)
 		goto found_first;
-	if (~tmp)
+	if (tmp != ~0UL)
 		goto found_middle;
 
 	size -= BITS_PER_LONG;
 	result += BITS_PER_LONG;
+	p++;
 aligned:
 	while (size & ~(BITS_PER_LONG - 1)) {
-		tmp = *(p++);
-		if (~tmp)
+		tmp = __reverse_ulong((unsigned char *)p);
+		if (tmp != ~0UL)
 			goto found_middle;
 		result += BITS_PER_LONG;
 		size -= BITS_PER_LONG;
+		p++;
 	}
 	if (!size)
 		return result;
-	tmp = *p;
 
+	tmp = __reverse_ulong((unsigned char *)p);
 found_first:
-	tmp |= ~0UL << size;
-	if (tmp == ~0UL)        /* Are any bits zero? */
+	tmp |= ~(~0UL << (BITS_PER_LONG - size));
+	if (tmp == ~0UL)	/* Are any bits zero? */
 		return result + size;   /* Nope. */
 found_middle:
 	return result + __reverse_ffz(tmp);
-#endif
 }
 
 void register_inmem_page(struct inode *inode, struct page *page)
@@ -316,11 +308,12 @@ int commit_inmem_pages(struct inode *inode, bool abort)
 				trace_f2fs_commit_inmem_page(cur->page, INMEM);
 				fio.page = cur->page;
 				err = do_write_data_page(&fio);
-				submit_bio = true;
 				if (err) {
 					unlock_page(cur->page);
 					break;
 				}
+				clear_cold_data(cur->page);
+				submit_bio = true;
 			}
 		} else {
 			trace_f2fs_commit_inmem_page(cur->page, INMEM_DROP);
@@ -2413,7 +2406,7 @@ static void discard_dirty_segmap(struct f2fs_sb_info *sbi,
 	struct dirty_seglist_info *dirty_i = DIRTY_I(sbi);
 
 	mutex_lock(&dirty_i->seglist_lock);
-	kvfree(dirty_i->dirty_segmap[dirty_type]);
+	f2fs_kvfree(dirty_i->dirty_segmap[dirty_type]);
 	dirty_i->nr_dirty[dirty_type] = 0;
 	mutex_unlock(&dirty_i->seglist_lock);
 }
@@ -2421,7 +2414,7 @@ static void discard_dirty_segmap(struct f2fs_sb_info *sbi,
 static void destroy_victim_secmap(struct f2fs_sb_info *sbi)
 {
 	struct dirty_seglist_info *dirty_i = DIRTY_I(sbi);
-	kvfree(dirty_i->victim_secmap);
+	f2fs_kvfree(dirty_i->victim_secmap);
 }
 
 static void destroy_dirty_segmap(struct f2fs_sb_info *sbi)
@@ -2460,8 +2453,8 @@ static void destroy_free_segmap(struct f2fs_sb_info *sbi)
 	if (!free_i)
 		return;
 	SM_I(sbi)->free_info = NULL;
-	kvfree(free_i->free_segmap);
-	kvfree(free_i->free_secmap);
+	f2fs_kvfree(free_i->free_segmap);
+	f2fs_kvfree(free_i->free_secmap);
 	kfree(free_i);
 }
 
@@ -2482,9 +2475,9 @@ static void destroy_sit_info(struct f2fs_sb_info *sbi)
 	}
 	kfree(sit_i->tmp_map);
 
-	kvfree(sit_i->sentries);
-	kvfree(sit_i->sec_entries);
-	kvfree(sit_i->dirty_sentries_bitmap);
+	f2fs_kvfree(sit_i->sentries);
+	f2fs_kvfree(sit_i->sec_entries);
+	f2fs_kvfree(sit_i->dirty_sentries_bitmap);
 
 	SM_I(sbi)->sit_info = NULL;
 	kfree(sit_i->sit_bitmap);
