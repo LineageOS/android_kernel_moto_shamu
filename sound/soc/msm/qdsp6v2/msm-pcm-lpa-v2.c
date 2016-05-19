@@ -132,7 +132,7 @@ static void event_handler(uint32_t opcode,
 		pr_debug("%s:writing %d bytes of buffer[%d] to dsp 2\n",
 				__func__, prtd->pcm_count, prtd->out_head);
 		temp = buf[0].phys + (prtd->out_head * prtd->pcm_count);
-		pr_debug("%s:writing buffer[%d] from 0x%pa\n",
+		pr_debug("%s:writing buffer[%d] from 0x%pK\n",
 				__func__, prtd->out_head, &temp);
 		if (prtd->meta_data_mode) {
 			memcpy(&output_meta_data, (char *)(buf->data +

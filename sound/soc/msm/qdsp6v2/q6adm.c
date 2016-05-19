@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -649,9 +649,8 @@ static int32_t adm_callback(struct apr_client_data *data, void *priv)
 
 	if (data->opcode == RESET_EVENTS) {
 		pr_debug("%s: Reset event is received: %d %d apr[%pK]\n",
-				__func__,
-				data->reset_event, data->reset_proc,
-				this_adm.apr);
+			__func__,
+			data->reset_event, data->reset_proc, this_adm.apr);
 		if (this_adm.apr) {
 			apr_reset(this_adm.apr);
 			for (i = 0; i < AFE_MAX_PORTS; i++) {
@@ -879,11 +878,10 @@ void send_adm_custom_topology(int port_id)
 	int				index;
 	int				result;
 	int				size = 4096;
-
+	
 	get_adm_custom_topology(&cal_block);
 	if (cal_block.cal_size == 0) {
-		pr_debug("%s: no cal to send addr= 0x%pa\n",
-				__func__, &cal_block.cal_paddr);
+		pr_debug("%s: no ADM cal to send\n", __func__);
 		goto done;
 	}
 
@@ -904,11 +902,12 @@ void send_adm_custom_topology(int port_id)
 		result = adm_memory_map_regions(port_id,
 				&cal_block.cal_paddr, 0, &size, 1);
 		if (result < 0) {
-			pr_err("%s: mmap did not work! size = %zd result %d\n",
+			pr_err("%s: ADM mmap did not work! size = %zd result %d\n",
 				__func__, cal_block.cal_size, result);
-			pr_debug("%s: mmap did not work! addr = 0x%pa, size = %zd\n",
-				__func__, &cal_block.cal_paddr,
-			       cal_block.cal_size);
+			pr_debug("%s: ADM mmap did not work! addr = 0x%pK, size = %zd ret %d\n",
+				__func__,
+				&cal_block.cal_paddr,
+				cal_block.cal_size, result);
 			goto done;
 		}
 	}
@@ -933,15 +932,13 @@ void send_adm_custom_topology(int port_id)
 	adm_top.payload_size = cal_block.cal_size;
 
 	atomic_set(&this_adm.copp_stat[index], 0);
-	pr_debug("%s: Sending ADM_CMD_ADD_TOPOLOGIES payload = 0x%x, size = %d\n",
-		__func__, adm_top.payload_addr_lsw,
+	pr_debug("%s: Sending ADM_CMD_ADD_TOPOLOGIES payload = 0x%pK, size = %d\n",
+		__func__, &cal_block.cal_paddr,
 		adm_top.payload_size);
 	result = apr_send_pkt(this_adm.apr, (uint32_t *)&adm_top);
 	if (result < 0) {
 		pr_err("%s: Set topologies failed port = 0x%x result %d\n",
 			__func__, port_id, result);
-		pr_debug("%s: Set topologies failed port = 0x%x payload = 0x%pa\n",
-			__func__, port_id, &cal_block.cal_paddr);
 		goto done;
 	}
 	/* Wait for the callback */
@@ -951,8 +948,6 @@ void send_adm_custom_topology(int port_id)
 	if (!result) {
 		pr_err("%s: Set topologies timed out port = 0x%x\n",
 			__func__, port_id);
-		pr_debug("%s: Set topologies timed out port = 0x%x, payload = 0x%pa\n",
-			__func__, port_id, &cal_block.cal_paddr);
 		goto done;
 	}
 
@@ -1015,14 +1010,14 @@ static int send_adm_cal_block(int port_id, struct acdb_cal_block *aud_cal,
 	adm_params.payload_size = aud_cal->cal_size;
 
 	atomic_set(&this_adm.copp_stat[index], 0);
-	pr_debug("%s: Sending SET_PARAMS payload = 0x%x, size = %d\n",
-		__func__, adm_params.payload_addr_lsw,
+	pr_debug("%s: Sending SET_PARAMS payload = 0x%pK, size = %d\n",
+		__func__, &aud_cal->cal_paddr,
 		adm_params.payload_size);
 	result = apr_send_pkt(this_adm.apr, (uint32_t *)&adm_params);
 	if (result < 0) {
 		pr_err("%s: Set params failed port = 0x%x result %d\n",
 			__func__, port_id, result);
-		pr_debug("%s: Set params failed port = 0x%x payload = 0x%pa\n",
+		pr_debug("%s: Set params failed port = 0x%x payload = 0x%pK\n",
 			__func__, port_id, &aud_cal->cal_paddr);
 		result = -EINVAL;
 		goto done;
@@ -1034,7 +1029,7 @@ static int send_adm_cal_block(int port_id, struct acdb_cal_block *aud_cal,
 	if (!result) {
 		pr_err("%s: Set params timed out port = 0x%x\n",
 			__func__, port_id);
-		pr_debug("%s: Set params timed out port = 0x%x, payload = 0x%pa\n",
+		pr_debug("%s: Set params timed out port = 0x%x, payload = 0x%pK\n",
 			__func__, port_id, &aud_cal->cal_paddr);
 		result = -EINVAL;
 		goto done;
