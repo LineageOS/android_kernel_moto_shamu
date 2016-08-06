@@ -2327,7 +2327,11 @@ static ssize_t hbm_store(struct device *dev,
 	}
 
 	r = kstrtoint(buf, 0, &enable);
-	if ((r) || ((enable != 0) && (enable != 1))) {
+	/* Treat '1' and above as enable, '0' as disable, otherwise the
+	 * value is invalid. */
+	if (enable > 1)
+		enable = 1;
+	if ((r) || (enable < 0)) {
 		pr_err("invalid HBM value = %d\n",
 			enable);
 		r = -EINVAL;
