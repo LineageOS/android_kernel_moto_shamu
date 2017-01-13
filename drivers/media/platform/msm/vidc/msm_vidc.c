@@ -1406,7 +1406,9 @@ static void cleanup_instance(struct msm_vidc_inst *inst)
 		mutex_unlock(&inst->lock);
 		msm_smem_delete_client(inst->mem_client);
 		debugfs_remove_recursive(inst->debugfs_root);
-		WARN_ON(!list_empty(&inst->pending_getpropq));
+
+		WARN_ON(!list_empty(&inst->pending_getpropq)
+			&& (msm_vidc_debug & VIDC_INFO));
 	}
 }
 
