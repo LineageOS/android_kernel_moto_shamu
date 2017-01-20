@@ -492,7 +492,7 @@ static void qh_link_periodic(struct ehci_hcd *ehci, struct ehci_qh *qh)
 	unsigned	period = qh->period;
 
 	dev_dbg (&qh->dev->dev,
-		"link qh%d-%04x/%p start %d [%d/%d us]\n",
+		"link qh%d-%04x/%pK start %d [%d/%d us]\n",
 		period, hc32_to_cpup(ehci, &qh->hw->hw_info2)
 			& (QH_CMASK | QH_SMASK),
 		qh, qh->start, qh->usecs, qh->c_usecs);
@@ -586,7 +586,7 @@ static void qh_unlink_periodic(struct ehci_hcd *ehci, struct ehci_qh *qh)
 		: (qh->usecs * 8);
 
 	dev_dbg (&qh->dev->dev,
-		"unlink qh%d-%04x/%p start %d [%d/%d us]\n",
+		"unlink qh%d-%04x/%pK start %d [%d/%d us]\n",
 		qh->period,
 		hc32_to_cpup(ehci, &qh->hw->hw_info2) & (QH_CMASK | QH_SMASK),
 		qh, qh->start, qh->usecs, qh->c_usecs);
@@ -658,7 +658,7 @@ static void end_unlink_intr(struct ehci_hcd *ehci, struct ehci_qh *qh)
 		 * FIXME kill the now-dysfunctional queued urbs
 		 */
 		else {
-			ehci_err(ehci, "can't reschedule qh %p, err %d\n",
+			ehci_err(ehci, "can't reschedule qh %pK, err %d\n",
 					qh, rc);
 		}
 	}
@@ -1451,7 +1451,7 @@ iso_stream_schedule (
 
 		/* no room in the schedule */
 		if (!done) {
-			ehci_dbg(ehci, "iso sched full %p", urb);
+			ehci_dbg(ehci, "iso sched full %pK", urb);
 			status = -ENOSPC;
 			goto fail;
 		}
@@ -1459,7 +1459,7 @@ iso_stream_schedule (
 
 	/* Tried to schedule too far into the future? */
 	if (unlikely(start - base + span - period >= mod)) {
-		ehci_dbg(ehci, "request %p would overflow (%u+%u >= %u)\n",
+		ehci_dbg(ehci, "request %pK would overflow (%u+%u >= %u)\n",
 				urb, start - base, span - period, mod);
 		status = -EFBIG;
 		goto fail;
@@ -1768,7 +1768,7 @@ static int itd_submit (struct ehci_hcd *ehci, struct urb *urb,
 
 #ifdef EHCI_URB_TRACE
 	ehci_dbg (ehci,
-		"%s %s urb %p ep%d%s len %d, %d pkts %d uframes [%p]\n",
+		"%s %s urb %pK ep%d%s len %d, %d pkts %d uframes [%pK]\n",
 		__func__, urb->dev->devpath, urb,
 		usb_pipeendpoint (urb->pipe),
 		usb_pipein (urb->pipe) ? "in" : "out",
@@ -2156,7 +2156,7 @@ static int sitd_submit (struct ehci_hcd *ehci, struct urb *urb,
 
 #ifdef EHCI_URB_TRACE
 	ehci_dbg (ehci,
-		"submit %p dev%s ep%d%s-iso len %d\n",
+		"submit %pK dev%s ep%d%s-iso len %d\n",
 		urb, urb->dev->devpath,
 		usb_pipeendpoint (urb->pipe),
 		usb_pipein (urb->pipe) ? "in" : "out",
@@ -2303,7 +2303,7 @@ restart:
 				q = *q_p;
 				break;
 			default:
-				ehci_dbg(ehci, "corrupt type %d frame %d shadow %p\n",
+				ehci_dbg(ehci, "corrupt type %d frame %d shadow %pK\n",
 					type, frame, q.ptr);
 				// BUG ();
 				/* FALL THROUGH */
