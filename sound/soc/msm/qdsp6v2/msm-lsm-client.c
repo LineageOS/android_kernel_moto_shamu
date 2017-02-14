@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -74,6 +74,7 @@ struct lsm_priv {
 	struct snd_lsm_event_status *event_status;
 	spinlock_t event_lock;
 	wait_queue_head_t event_wait;
+	struct mutex lsm_api_lock;
 	unsigned long event_avail;
 	atomic_t event_wait_stop;
 };
@@ -194,6 +195,7 @@ static int msm_lsm_ioctl_shared(struct snd_pcm_substream *substream,
 	uint8_t *confidence_level = NULL;
 
 	pr_debug("%s: enter cmd %x\n", __func__, cmd);
+	mutex_lock(&prtd->lsm_api_lock);
 	switch (cmd) {
 	case SNDRV_LSM_SET_SESSION_DATA:
 		pr_debug("%s: set Session data\n", __func__);
@@ -276,7 +278,8 @@ static int msm_lsm_ioctl_shared(struct snd_pcm_substream *substream,
 		if (!arg) {
 			pr_err("%s: %s Invalid argument\n",
 				__func__, "SNDRV_LSM_SET_PARAMS");
-			return -EINVAL;
+			rc = -EINVAL;
+			break;
 		}
 
 		memcpy(&det_params, arg,
@@ -356,10 +359,18 @@ static int msm_lsm_ioctl_shared(struct snd_pcm_substream *substream,
 	case SNDRV_LSM_EVENT_STATUS:
 		pr_debug("%s: Get event status\n", __func__);
 		atomic_set(&prtd->event_wait_stop, 0);
+
+		/*
+		 * Release the api lock before wait to allow
+		 * other IOCTLs to be invoked while waiting
+		 * for event
+		 */
+		mutex_unlock(&prtd->lsm_api_lock);
 		rc = wait_event_interruptible(prtd->event_wait,
 				(cmpxchg(&prtd->event_avail, 1, 0) ||
 				 (xchg = atomic_cmpxchg(&prtd->event_wait_stop,
 							1, 0))));
+		mutex_lock(&prtd->lsm_api_lock);
 		pr_debug("%s: wait_event_interruptible %d event_wait_stop %d\n",
 			 __func__, rc, xchg);
 		if (!rc && !xchg) {
@@ -425,6 +436,7 @@ static int msm_lsm_ioctl_shared(struct snd_pcm_substream *substream,
 	else
 		pr_err("%s: cmd 0x%x failed %d\n", __func__, cmd, rc);
 
+	mutex_unlock(&prtd->lsm_api_lock);
 	return rc;
 }
 
@@ -582,6 +594,7 @@ static int msm_lsm_open(struct snd_pcm_substream *substream)
 		       __func__);
 		return -ENOMEM;
 	}
+	mutex_init(&prtd->lsm_api_lock);
 	spin_lock_init(&prtd->event_lock);
 	init_waitqueue_head(&prtd->event_wait);
 	prtd->substream = substream;
@@ -696,6 +709,7 @@ static int msm_lsm_close(struct snd_pcm_substream *substream)
 	kfree(prtd->event_status);
 	prtd->event_status = NULL;
 	spin_unlock_irqrestore(&prtd->event_lock, flags);
+	mutex_destroy(&prtd->lsm_api_lock);
 	kfree(prtd);
 
 	return 0;
