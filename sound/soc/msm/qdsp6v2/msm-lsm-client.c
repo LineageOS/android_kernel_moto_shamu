@@ -640,13 +640,13 @@ static int msm_lsm_prepare(struct snd_pcm_substream *substream)
 		pr_err("%s: LSM client data ptr is NULL\n", __func__);
 		return -EINVAL;
 	}
+	prtd->lsm_client->opened = false;
 	ret = q6lsm_open(prtd->lsm_client, prtd->lsm_client->app_id);
 	if (ret < 0) {
 		pr_err("%s: lsm open failed, %d\n", __func__, ret);
-		q6lsm_client_free(prtd->lsm_client);
-		kfree(prtd);
 		return ret;
 	}
+	prtd->lsm_client->opened = true;
 	pr_debug("%s: Session ID %d\n", __func__,
 		 prtd->lsm_client->session);
 	prtd->lsm_client->started = false;
@@ -686,7 +686,10 @@ static int msm_lsm_close(struct snd_pcm_substream *substream)
 				 __func__);
 	}
 
-	q6lsm_close(prtd->lsm_client);
+	if (prtd->lsm_client->opened) {
+		q6lsm_close(prtd->lsm_client);
+		prtd->lsm_client->opened = false;
+	}
 	q6lsm_client_free(prtd->lsm_client);
 
 	spin_lock_irqsave(&prtd->event_lock, flags);
