@@ -708,6 +708,7 @@ static int l2tp_nl_cmd_session_get(struct sk_buff *skb, struct genl_info *info)
 
 	ret = l2tp_nl_session_send(msg, info->snd_portid, info->snd_seq,
 				   0, session);
+
 	if (ret < 0)
 		goto err_ref_msg;
 
