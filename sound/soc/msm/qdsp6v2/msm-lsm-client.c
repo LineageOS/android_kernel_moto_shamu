@@ -548,7 +548,7 @@ static int msm_lsm_ioctl(struct snd_pcm_substream *substream,
 		}
 		size = sizeof(struct snd_lsm_event_status) +
 		userarg.payload_size;
-		user = kmalloc(size, GFP_KERNEL);
+		user = kzalloc(size, GFP_KERNEL);
 		if (!user) {
 			pr_err("%s: Allocation failed event status size %d\n",
 			__func__, size);
