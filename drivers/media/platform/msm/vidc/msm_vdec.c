@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -792,7 +792,7 @@ int msm_vdec_prepare_buf(struct msm_vidc_inst *inst,
 	if (inst->state == MSM_VIDC_CORE_INVALID ||
 			inst->core->state == VIDC_CORE_INVALID) {
 		dprintk(VIDC_ERR,
-			"Core %p in bad state, ignoring prepare buf\n",
+			"Core %pK in bad state, ignoring prepare buf\n",
 				inst->core);
 		goto exit;
 	}
