@@ -156,6 +156,7 @@ struct fd_ctx {
 	struct msm_fd_stats *stats;
 	struct msm_fd_buf_handle work_buf;
 	struct completion *wait_stop_stream;
+	struct mutex lock;
 };
 
 /*
