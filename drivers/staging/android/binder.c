@@ -65,6 +65,7 @@
 #include <linux/debugfs.h>
 #include <linux/rbtree.h>
 #include <linux/sched.h>
+#include <linux/sched/rt.h>
 #include <linux/seq_file.h>
 #include <linux/uaccess.h>
 #include <linux/pid_namespace.h>
@@ -119,6 +120,9 @@ BINDER_DEBUG_ENTRY(proc);
 #define FORBIDDEN_MMAP_FLAGS                (VM_WRITE)
 
 #define BINDER_SMALL_BUF_SIZE (PAGE_SIZE * 64)
+
+#define NICE_TO_PRIO(nice)	(MAX_RT_PRIO + (nice) + 20)
+#define PRIO_TO_NICE(prio)	((prio) - MAX_RT_PRIO - 20)
 
 enum {
 	BINDER_DEBUG_USER_ERROR             = 1U << 0,
@@ -249,7 +253,7 @@ static struct binder_transaction_log_entry *binder_transaction_log_add(
 	if (cur >= ARRAY_SIZE(log->entry))
 		log->full = 1;
 	e = &log->entry[cur % ARRAY_SIZE(log->entry)];
-	WRITE_ONCE(e->debug_id_done, 0);
+	ACCESS_ONCE(e->debug_id_done) = 0;
 	/*
 	 * write-barrier to synchronize access to e->debug_id_done.
 	 * We make sure the initialized 0 value is seen before
@@ -1125,16 +1129,16 @@ static void binder_do_set_priority(struct task_struct *task,
 
 		if (max_rtprio == 0) {
 			policy = SCHED_NORMAL;
-			priority = MIN_NICE;
+			priority = -20;
 		} else if (priority > max_rtprio) {
 			priority = max_rtprio;
 		}
 	}
 
 	if (verify && is_fair_policy(policy) && !has_cap_nice) {
-		long min_nice = rlimit_to_nice(task_rlimit(task, RLIMIT_NICE));
+		long min_nice = 20 - task_rlimit(task, RLIMIT_NICE);
 
-		if (min_nice > MAX_NICE) {
+		if (min_nice > 19) {
 			binder_user_error("%d RLIMIT_NICE not set\n",
 					  task->pid);
 			return;
@@ -3242,7 +3246,7 @@ static void binder_transaction(struct binder_proc *proc,
 	 * of log entry
 	 */
 	smp_wmb();
-	WRITE_ONCE(e->debug_id_done, t_debug_id);
+	ACCESS_ONCE(e->debug_id_done) = t_debug_id;
 	return;
 
 err_dead_proc_or_thread:
@@ -3297,8 +3301,8 @@ err_no_context_mgr_node:
 		 * of log entry
 		 */
 		smp_wmb();
-		WRITE_ONCE(e->debug_id_done, t_debug_id);
-		WRITE_ONCE(fe->debug_id_done, t_debug_id);
+		ACCESS_ONCE(e->debug_id_done) = t_debug_id;
+		ACCESS_ONCE(fe->debug_id_done) = t_debug_id;
 	}
 
 	BUG_ON(thread->return_error.cmd != BR_OK);
@@ -5522,7 +5526,7 @@ static int binder_proc_show(struct seq_file *m, void *unused)
 static void print_binder_transaction_log_entry(struct seq_file *m,
 					struct binder_transaction_log_entry *e)
 {
-	int debug_id = READ_ONCE(e->debug_id_done);
+	int debug_id = ACCESS_ONCE(e->debug_id_done);
 	/*
 	 * read barrier to guarantee debug_id_done read before
 	 * we print the log values
@@ -5541,7 +5545,7 @@ static void print_binder_transaction_log_entry(struct seq_file *m,
 	 * done printing the fields of the entry
 	 */
 	smp_rmb();
-	seq_printf(m, debug_id && debug_id == READ_ONCE(e->debug_id_done) ?
+	seq_printf(m, debug_id && debug_id == ACCESS_ONCE(e->debug_id_done) ?
 			"\n" : " (incomplete)\n");
 }
 
