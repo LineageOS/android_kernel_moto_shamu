@@ -275,7 +275,7 @@ void take_dentry_name_snapshot(struct name_snapshot *name, struct dentry *dentry
 		u32 len;
 		char *p = NULL;
 
-		for (;;) {
+		do {
 			len = dentry->d_name.len;
 			spin_unlock(&dentry->d_lock);
 
@@ -284,9 +284,7 @@ void take_dentry_name_snapshot(struct name_snapshot *name, struct dentry *dentry
 			p = kmalloc(len + 1, GFP_KERNEL | __GFP_NOFAIL);
 
 			spin_lock(&dentry->d_lock);
-			if (dentry->d_name.len <= len)
-				break;
-		}
+		} while (dentry->d_name.len > len);
 		memcpy(p, dentry->d_name.name, dentry->d_name.len + 1);
 		spin_unlock(&dentry->d_lock);
 
