@@ -2215,10 +2215,10 @@ static size_t binder_validate_object(struct binder_buffer *buffer, u64 offset)
 	struct binder_object_header *hdr;
 	size_t object_size = 0;
 
-	if (offset > buffer->data_size - sizeof(*hdr) ||
-	    buffer->data_size < sizeof(*hdr) ||
-	    !IS_ALIGNED(offset, sizeof(u32)))
-		return 0;
+	if (buffer->data_size < sizeof(*hdr) ||
+	    offset > buffer->data_size - sizeof(*hdr) ||
+ 	    !IS_ALIGNED(offset, sizeof(u32)))
+ 		return 0;
 
 	/* Ok, now see if we can read a complete object. */
 	hdr = (struct binder_object_header *)(buffer->data + offset);
