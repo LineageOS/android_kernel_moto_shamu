@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5f50e6ed_cc00021f",
+        "filename": "fs/sdcardfs/Untitled Document",
+        "patchSetId": 1
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2018-06-04T18:35:34Z",
+      "side": 1,
+      "message": "???",
+      "revId": "89d2ae0de28baef3610a270d4e5556da5b23b558",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
