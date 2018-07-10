@@ -812,8 +812,8 @@ int binder_alloc_get_allocated_count(struct binder_alloc *alloc)
  */
 void binder_alloc_vma_close(struct binder_alloc *alloc)
 {
-	ACCESS_ONCE(alloc->vma) = NULL;
-	ACCESS_ONCE(alloc->vma_vm_mm) = NULL;
+	WRITE_ONCE(alloc->vma, NULL);
+	WRITE_ONCE(alloc->vma_vm_mm, NULL);
 }
 
 /**
