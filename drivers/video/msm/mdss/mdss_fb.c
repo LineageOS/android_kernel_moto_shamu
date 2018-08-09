@@ -678,7 +678,7 @@ static int mdss_fb_create_sysfs(struct msm_fb_data_type *mfd)
 		pr_err("panel id group creation failed, rc=%d\n", rc);
 
 err:
-	return mdss_livedisplay_create_sysfs(mfd);
+	return rc;
 }
 
 static void mdss_fb_remove_sysfs(struct msm_fb_data_type *mfd)
