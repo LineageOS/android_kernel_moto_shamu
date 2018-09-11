@@ -31,6 +31,24 @@
 struct video_device;
 struct v4l2_ctrl_handler;
 
+/**
+ * struct v4l2_fh - Describes a V4L2 file handler
+ *
+ * @list: list of file handlers
+ * @vdev: pointer to &struct video_device
+ * @ctrl_handler: pointer to &struct v4l2_ctrl_handler
+ * @prio: priority of the file handler, as defined by &enum v4l2_priority
+ *
+ * @wait: event' s wait queue
+ * @subscribe_lock: serialise changes to the subscribed list; guarantee that
+ *		    the add and del event callbacks are orderly called
+ * @subscribed: list of subscribed events
+ * @available: list of events waiting to be dequeued
+ * @navailable: number of available events at @available list
+ * @sequence: event sequence number
+ *
+ * @m2m_ctx: pointer to &struct v4l2_m2m_ctx
+ */
 struct v4l2_fh {
 	struct list_head	list;
 	struct video_device	*vdev;
@@ -39,8 +57,9 @@ struct v4l2_fh {
 
 	/* Events */
 	wait_queue_head_t	wait;
-	struct list_head	subscribed; /* Subscribed events */
-	struct list_head	available; /* Dequeueable event */
+	struct mutex		subscribe_lock;
+	struct list_head	subscribed;
+	struct list_head	available;
 	unsigned int		navailable;
 	u32			sequence;
 };
