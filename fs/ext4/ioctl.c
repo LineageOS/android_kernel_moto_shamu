@@ -115,7 +115,7 @@ static long swap_inode_boot_loader(struct super_block *sb,
 		goto swap_boot_out;
 	}
 
-	inode_bl = ext4_iget(sb, EXT4_BOOT_LOADER_INO);
+	inode_bl = ext4_iget(sb, EXT4_BOOT_LOADER_INO, EXT4_IGET_SPECIAL);
 	if (IS_ERR(inode_bl)) {
 		err = PTR_ERR(inode_bl);
 		goto swap_boot_out;
