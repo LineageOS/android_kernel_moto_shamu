@@ -3,7 +3,6 @@
 
 #include <uapi/linux/fcntl.h>
 
-
 #ifndef force_o_largefile
 #define force_o_largefile() (BITS_PER_LONG != 32)
 #endif
