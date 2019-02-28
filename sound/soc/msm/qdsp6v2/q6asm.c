@@ -1446,6 +1446,7 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 		data->dest_port);
 	if ((data->opcode != ASM_DATA_EVENT_RENDERED_EOS) &&
 	    (data->opcode != ASM_DATA_EVENT_EOS) &&
+	    (data->opcode != ASM_SESSION_EVENTX_OVERFLOW) &&
 	    (data->opcode != ASM_SESSION_EVENT_RX_UNDERFLOW)) {
 		if (payload == NULL) {
 			pr_err("%s: payload is null\n", __func__);
@@ -1587,6 +1588,14 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 				return -EINVAL;
 			}
 			spin_lock_irqsave(&port->dsp_lock, dsp_flags);
+			if (data->token < 0 ||
+					data->token >= port->max_buf_cnt) {
+				pr_err("%s: Invalid token buffer index %u\n",
+					__func__, data->token);
+				spin_unlock_irqrestore(&port->dsp_lock,
+								dsp_flags);
+				return -EINVAL;
+			}
 			if (lower_32_bits(port->buf[data->token].phys) !=
 			payload[0] ||
 			upper_32_bits(port->buf[data->token].phys) !=
@@ -1656,6 +1665,13 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 			}
 			spin_lock_irqsave(&port->dsp_lock, dsp_flags);
 			token = data->token;
+			if (token < 0 || token >= port->max_buf_cnt) {
+				pr_err("%s: Invalid token buffer index %u\n",
+					__func__, token);
+				spin_unlock_irqrestore(&port->dsp_lock,
+								dsp_flags);
+				return -EINVAL;
+			}
 			port->buf[token].used = 0;
 			if (lower_32_bits(port->buf[token].phys) !=
 			payload[READDONE_IDX_BUFADD_LSW] ||
