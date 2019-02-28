@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, 2019 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -688,7 +688,7 @@ static int32_t adm_callback(struct apr_client_data *data, void *priv)
 	}
 
 	adm_callback_debug_print(data);
-	if (data->payload_size) {
+	if (data->payload_size >= sizeof(uint32_t)) {
 		index = q6audio_get_port_index(data->token);
 		if (index < 0 || index >= AFE_MAX_PORTS) {
 			pr_err("%s: invalid port idx %d token %d\n",
@@ -698,6 +698,14 @@ static int32_t adm_callback(struct apr_client_data *data, void *priv)
 		if (data->opcode == APR_BASIC_RSP_RESULT) {
 			pr_debug("%s: APR_BASIC_RSP_RESULT id 0x%x\n",
 				__func__, payload[0]);
+			if (!(payload[0] == ADM_CMD_SET_PP_PARAMS_V5)) {
+				if (data->payload_size <
+						(2 * sizeof(uint32_t))) {
+					pr_err("%s: Invalid payload size %d\n",
+						__func__, data->payload_size);
+					return 0;
+				}
+			}
 			if (payload[1] != 0) {
 				pr_err("%s: cmd = 0x%x returned error = 0x%x\n",
 					__func__, payload[0], payload[1]);
@@ -778,6 +786,14 @@ static int32_t adm_callback(struct apr_client_data *data, void *priv)
 			struct adm_cmd_rsp_device_open_v5 *open =
 			(struct adm_cmd_rsp_device_open_v5 *)data->payload;
 
+			if (data->payload_size <
+				sizeof(struct adm_cmd_rsp_device_open_v5)) {
+				pr_err("%s: Invalid payload size %d\n",
+					__func__, data->payload_size);
+				return 0;
+			}
+			open =
+			    (struct adm_cmd_rsp_device_open_v5 *)data->payload;
 			if (open->copp_id == INVALID_COPP_ID) {
 				pr_err("%s: invalid coppid rxed %d\n",
 					__func__, open->copp_id);
@@ -834,21 +850,29 @@ static int32_t adm_callback(struct apr_client_data *data, void *priv)
 				pr_err("%s: ADM_CMDRSP_GET_PP_TOPO_MODULE_LIST",
 					 __func__);
 				pr_err(":err = 0x%x\n", payload[0]);
-			} else if (payload[1] >
-				   ((ADM_GET_TOPO_MODULE_LIST_LENGTH /
-				   sizeof(uint32_t)) - 1)) {
-				pr_err("%s: ADM_CMDRSP_GET_PP_TOPO_MODULE_LIST",
-					 __func__);
-				pr_err(":size = %d\n", payload[1]);
-			} else {
-				pr_debug("%s:Num modules payload[1] %d\n",
-					 __func__, payload[1]);
-				adm_module_topo_list[0] = payload[1];
-				for (i = 1; i <= payload[1]; i++) {
-					adm_module_topo_list[i] = payload[1+i];
-					pr_debug("%s:payload[%d] = %x\n",
-						 __func__, (i+1), payload[1+i]);
+			} else if (data->payload_size >=
+				   (2 * sizeof(uint32_t))) {
+				if (payload[1] >
+					   ((ADM_GET_TOPO_MODULE_LIST_LENGTH /
+					   sizeof(uint32_t)) - 1)) {
+					pr_err("%s: ADM_CMDRSP_GET_PP_TOPO_MODULE_LIST",
+						 __func__);
+					pr_err(":size = %d\n", payload[1]);
+				} else {
+					pr_debug("%s:Num modules payload[1] %d\n",
+						 __func__, payload[1]);
+					adm_module_topo_list[0] = payload[1];
+					for (i = 1; i <= payload[1]; i++) {
+						adm_module_topo_list[i] =
+							payload[1+i];
+						pr_debug("%s:payload[%d] = %x\n",
+							 __func__, (i+1),
+							 payload[1+i]);
+					}
 				}
+			} else {
+				pr_err("%s: Invalid payload size %d\n",
+				       __func__, data->payload_size);
 			}
 			atomic_set(&this_adm.copp_stat[index], 1);
 			wake_up(&this_adm.wait[index]);
