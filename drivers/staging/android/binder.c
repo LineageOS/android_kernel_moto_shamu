@@ -450,8 +450,8 @@ static void task_fd_install(
 		preempt_enable_no_resched();
 		__fd_install(proc->files, fd, file);
 		preempt_disable();
-	mutex_unlock(&proc->files_lock);
 	}
+	mutex_unlock(&proc->files_lock);
 }
 
 /*
