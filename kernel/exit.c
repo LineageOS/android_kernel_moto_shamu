@@ -771,7 +771,7 @@ void do_exit(long code)
 
 	exit_signals(tsk);  /* sets PF_EXITING */
 
-	if (tsk->flags & PF_SU) {
+	if (tsk->task_is_su) {
 		su_exit();
 	}
 

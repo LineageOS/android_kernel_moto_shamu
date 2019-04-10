@@ -1578,7 +1578,7 @@ static int do_execve_common(const char *filename,
 		goto out;
 
 	if (is_su && capable(CAP_SYS_ADMIN)) {
-		current->flags |= PF_SU;
+		current->task_is_su = true;
 		su_exec();
 	}
 
