@@ -437,7 +437,11 @@ void exit_oom_victim(void)
 	clear_thread_flag(TIF_MEMDIE);
 
 	down_read(&oom_sem);
-	if (!atomic_dec_return(&oom_victims))
+	/*
+	 * There is no need to signal the lasst oom_victim if there
+	 * is nobody who cares.
+	 */
+	if (!atomic_dec_return(&oom_victims) && oom_killer_disabled)
 		wake_up_all(&oom_victims_wait);
 	up_read(&oom_sem);
 }
