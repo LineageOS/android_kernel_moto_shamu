@@ -352,9 +352,8 @@ static struct sysrq_key_op sysrq_term_op = {
 
 static void moom_callback(struct work_struct *ignored)
 {
-	if (!out_of_memory(node_zonelist(first_memory_node, GFP_KERNEL),
-			   GFP_KERNEL, 0, NULL, true))
-		pr_info("OOM request ignored because killer is disabled\n");
+	out_of_memory(node_zonelist(first_memory_node, GFP_KERNEL), GFP_KERNEL,
+		      0, NULL, true);
 }
 
 static DECLARE_WORK(moom_work, moom_callback);
