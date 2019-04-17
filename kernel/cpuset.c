@@ -2601,26 +2601,28 @@ int cpuset_mems_allowed_intersects(const struct task_struct *tsk1,
 #define CPUSET_NODELIST_LEN	(256)
 
 /**
- * cpuset_print_current_mems_allowed - prints current's cpuset and mems_allowed
+ * cpuset_print_task_mems_allowed - prints task's cpuset and mems_allowed
+ * @task: pointer to task_struct of some task.
  *
- * Description: Prints current's name, cpuset name, and cached copy of its
- * mems_allowed to the kernel log.
+ * Description: Prints @task's name, cpuset name, and cached copy of its
+ * mems_allowed to the kernel log.  Must hold task_lock(task) to allow
+ * dereferencing task_cs(task).
  */
-void cpuset_print_current_mems_allowed(void)
+void cpuset_print_task_mems_allowed(struct task_struct *tsk)
 {
 	 /* Statically allocated to prevent using excess stack. */
 	static char cpuset_nodelist[CPUSET_NODELIST_LEN];
 	static DEFINE_SPINLOCK(cpuset_buffer_lock);
 
-	struct cgroup *cgrp = task_cs(current)->css.cgroup;
+	struct cgroup *cgrp = task_cs(tsk)->css.cgroup;
 
 	rcu_read_lock();
 	spin_lock(&cpuset_buffer_lock);
 
 	nodelist_scnprintf(cpuset_nodelist, CPUSET_NODELIST_LEN,
-			   current->mems_allowed);
-	pr_info("%s cpuset=%s mems_allowed=%s\n",
-	       current->comm, cgroup_name(cgrp), cpuset_nodelist);
+			   tsk->mems_allowed);
+	printk(KERN_INFO "%s cpuset=%s mems_allowed=%s\n",
+	       tsk->comm, cgroup_name(cgrp), cpuset_nodelist);
 
 	spin_unlock(&cpuset_buffer_lock);
 	rcu_read_unlock();
