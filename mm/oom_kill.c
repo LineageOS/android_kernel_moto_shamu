@@ -434,7 +434,8 @@ void mark_oom_victim(struct task_struct *tsk)
  */
 void exit_oom_victim(void)
 {
-	clear_thread_flag(TIF_MEMDIE);
+	if (!test_and_clear_thread_flag(TIF_MEMDIE))
+		return;
 
 	down_read(&oom_sem);
 	/*
