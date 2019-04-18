@@ -786,7 +786,7 @@ void extract_dci_pkt_rsp(unsigned char *buf, int len, int data_source,
 	struct dci_pkt_req_entry_t *req_entry = NULL;
 	unsigned char *temp = buf;
 
-	if (!buf) {
+	if (!buf || len <= 0) {
 		pr_err("diag: Invalid pointer in %s\n", __func__);
 		return;
 	}
@@ -800,6 +800,8 @@ void extract_dci_pkt_rsp(unsigned char *buf, int len, int data_source,
 								dci_cmd_code);
 		return;
 	}
+	if (len < (cmd_code_len + sizeof(int)))
+		return;
 	temp += cmd_code_len;
 	tag = *(int *)temp;
 	temp += sizeof(int);
@@ -808,10 +810,16 @@ void extract_dci_pkt_rsp(unsigned char *buf, int len, int data_source,
 	 * The size of the response is (total length) - (length of the command
 	 * code, the tag (int)
 	 */
-	rsp_len = len - (cmd_code_len + sizeof(int));
-	if ((rsp_len == 0) || (rsp_len > (len - 5))) {
-		pr_err("diag: Invalid length in %s, len: %d, rsp_len: %d",
-						__func__, len, rsp_len);
+	if (len >= cmd_code_len + sizeof(int)) {
+		rsp_len = len - (cmd_code_len + sizeof(int));
+		if ((rsp_len == 0) || (rsp_len > (len - 5))) {
+			pr_err("diag: Invalid length in %s, len: %d, rsp_len: %d\n",
+					__func__, len, rsp_len);
+			return;
+		}
+	} else {
+		pr_err("diag:%s: Invalid length(%d) for calculating rsp_len\n",
+			__func__, len);
 		return;
 	}
 
