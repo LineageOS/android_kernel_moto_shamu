@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, 2019 Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -132,7 +132,7 @@ static int q6lsm_callback(struct apr_client_data *data, void *priv)
 
 	if (client->cb)
 		client->cb(data->opcode, data->token, data->payload,
-			   client->priv);
+				data->payload_size, client->priv);
 
 	return 0;
 }
@@ -908,6 +908,8 @@ static int q6lsm_mmapcallback(struct apr_client_data *data, void *priv)
 		pr_debug("%s: SSR event received 0x%x, event 0x%x,\n"
 			 "proc 0x%x SID 0x%x\n", __func__, data->opcode,
 			 data->reset_event, data->reset_proc, sid);
+		if (sid < LSM_MIN_SESSION_ID || sid > LSM_MAX_SESSION_ID)
+			pr_err("%s: Invalid session %d\n", __func__, sid);
 		lsm_common.common_client[sid].lsm_cal_phy_addr = 0;
 		return 0;
 	}
@@ -950,7 +952,8 @@ static int q6lsm_mmapcallback(struct apr_client_data *data, void *priv)
 	}
 	if (client->cb)
 		client->cb(data->opcode, data->token,
-			   data->payload, client->priv);
+			data->payload, data->payload_size,
+			client->priv);
 	return 0;
 }
 

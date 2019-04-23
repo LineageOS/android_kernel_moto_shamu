@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, 2019 Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -80,7 +80,8 @@ struct lsm_priv {
 };
 
 static void lsm_event_handler(uint32_t opcode, uint32_t token,
-			      void *payload, void *priv)
+			      void *payload, uint16_t client_size,
+				void *priv)
 {
 	unsigned long flags;
 	struct lsm_priv *prtd = priv;
@@ -92,6 +93,11 @@ static void lsm_event_handler(uint32_t opcode, uint32_t token,
 	pr_debug("%s: Opcode 0x%x\n", __func__, opcode);
 	switch (opcode) {
 	case LSM_SESSION_EVENT_DETECTION_STATUS:
+		if (client_size < 3 * sizeof(uint8_t)) {
+			pr_err("%s: client_size has invalid size[%d]\n",
+				__func__, client_size);
+			return;
+		}
 		status = (uint16_t)((uint8_t *)payload)[0];
 		payload_size = (uint16_t)((uint8_t *)payload)[2];
 		index = 4;
@@ -99,6 +105,11 @@ static void lsm_event_handler(uint32_t opcode, uint32_t token,
 			 __func__, status , payload_size);
 	break;
 	case LSM_SESSION_EVENT_DETECTION_STATUS_V2:
+		if (client_size < 2 * sizeof(uint8_t)) {
+			pr_err("%s: client_size has invalid size[%d]\n",
+				__func__, client_size);
+			return;
+		}
 		status = (uint16_t)((uint8_t *)payload)[0];
 		payload_size = (uint16_t)((uint8_t *)payload)[1];
 		index = 2;
@@ -119,12 +130,21 @@ static void lsm_event_handler(uint32_t opcode, uint32_t token,
 		prtd->event_status->status = status;
 		prtd->event_status->payload_size = payload_size;
 		if (likely(prtd->event_status)) {
-			memcpy(prtd->event_status->payload,
-			       &((uint8_t *)payload)[index],
-			       payload_size);
-			prtd->event_avail = 1;
-			spin_unlock_irqrestore(&prtd->event_lock, flags);
-			wake_up(&prtd->event_wait);
+			if (client_size >= (payload_size + index)) {
+				memcpy(prtd->event_status->payload,
+					&((uint8_t *)payload)[index],
+					payload_size);
+				prtd->event_avail = 1;
+				spin_unlock_irqrestore(&prtd->event_lock,
+								flags);
+				wake_up(&prtd->event_wait);
+			} else {
+				spin_unlock_irqrestore(&prtd->event_lock,
+								flags);
+				pr_err("%s: Failed to copy memory with invalid size = %d\n",
+					__func__, payload_size);
+				return;
+			}
 		} else {
 			spin_unlock_irqrestore(&prtd->event_lock, flags);
 			pr_err("%s: Couldn't allocate %d bytes of memory\n",
