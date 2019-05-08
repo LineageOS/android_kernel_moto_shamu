@@ -151,7 +151,7 @@ static int sha224_final(struct shash_desc *desc, u8 *out)
 	sha256_final(desc, D);
 
 	memcpy(out, D, SHA224_DIGEST_SIZE);
-	memset(D, 0, SHA256_DIGEST_SIZE);
+	memzero_explicit(D, SHA256_DIGEST_SIZE);
 
 	return 0;
 }
