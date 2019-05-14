@@ -168,6 +168,14 @@
 			reg = <0 0 0 0xfc00000>;
 			label = "secure_mem";
 		};
+
+		peripheral_mem: peripheral_region@0xdb00000 {
+			linux,reserve-contiguous-region;
+			linux,reserve-region;
+			linux,remove-completely;
+			reg = <0x0 0x0db00000 0x0 0x1d00000>;
+			label = "peripheral_mem";
+		};
         };
 };
 
