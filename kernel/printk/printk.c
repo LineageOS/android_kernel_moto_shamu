@@ -2100,15 +2100,14 @@ static int __cpuinit console_cpu_notify(struct notifier_block *self,
 	unsigned long action, void *hcpu)
 {
 	switch (action) {
+	case CPU_ONLINE:
 	case CPU_DEAD:
 	case CPU_DOWN_FAILED:
 	case CPU_UP_CANCELED:
 		console_lock();
 		console_unlock();
-		break;
-	case CPU_ONLINE:
+	/* invoked with preemption disabled, so defer */
 	case CPU_DYING:
-		/* invoked with preemption disabled, so defer */
 		if (!console_trylock())
 			schedule_work(&console_cpu_notify_work);
 		else
