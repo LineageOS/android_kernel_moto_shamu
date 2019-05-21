@@ -605,7 +605,7 @@ static void apq8084_liquid_ext_spk_power_amp_off(u32 spk)
 		   LO_2_SPK_AMP |
 		   LO_4_SPK_AMP)) {
 
-		pr_debug("%s Left and right speakers case spk = 0x%08x",
+		pr_debug("%s Left and right speakers case spk = 0x%08x\n",
 			__func__, spk);
 		apq8084_ext_spk_pamp &= ~spk;
 		if (!apq8084_ext_spk_pamp) {
@@ -631,7 +631,7 @@ static void apq8084_ext_control(struct snd_soc_codec *codec)
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
 
 	mutex_lock(&dapm->codec->mutex);
-	pr_debug("%s: apq8084_spk_control = %d", __func__, apq8084_spk_control);
+	pr_debug("%s: apq8084_spk_control = %d\n", __func__, apq8084_spk_control);
 	if (apq8084_spk_control == APQ8084_SPK_ON) {
 		snd_soc_dapm_enable_pin(dapm, "Lineout_1 amp");
 		snd_soc_dapm_enable_pin(dapm, "Lineout_3 amp");
@@ -651,7 +651,7 @@ static void apq8084_ext_control(struct snd_soc_codec *codec)
 static int apq8084_get_spk(struct snd_kcontrol *kcontrol,
 			   struct snd_ctl_elem_value *ucontrol)
 {
-	pr_debug("%s: apq8084_spk_control = %d", __func__, apq8084_spk_control);
+	pr_debug("%s: apq8084_spk_control = %d\n", __func__, apq8084_spk_control);
 	ucontrol->value.integer.value[0] = apq8084_spk_control;
 	return 0;
 }
@@ -934,13 +934,13 @@ static int msm_snd_ext_hs_detect(struct snd_soc_codec *codec)
 	if (of_property_read_string(codec->card->dev->of_node,
 				"qcom,ext_hs_detect", &hs_detect_name))
 		dev_info(codec->card->dev,
-				"qcom,ext_hs_detect is not configured");
+				"qcom,ext_hs_detect is not configured\n");
 
 #ifdef CONFIG_SND_SOC_TPA6165A2
 	if (!strcmp(hs_detect_name, "tpa6165")) {
 		err = tpa6165_hs_detect(codec);
 		if (!err) {
-			pr_info("%s:tpa6165 hs detection is used", __func__);
+			pr_info("%s:tpa6165 hs detection is used\n", __func__);
 			/* dapm controls for tpa6165 */
 			snd_soc_dapm_new_controls(dapm, tpa6165_dapm_widgets,
 					ARRAY_SIZE(tpa6165_dapm_widgets));
@@ -953,14 +953,14 @@ static int msm_snd_ext_hs_detect(struct snd_soc_codec *codec)
 			snd_soc_dapm_sync(dapm);
 			return err;
 		}
-		pr_info("%s:tpa6165 hs det load error %d", __func__, err);
+		pr_info("%s:tpa6165 hs det load error %d\n", __func__, err);
 	}
 #endif
 #ifdef CONFIG_SND_SOC_FSA8500
 	if (!strcmp(hs_detect_name, "fsa8500")) {
 		err = fsa8500_hs_detect(codec);
 		if (!err) {
-			pr_info("%s:fsa8500 hs detection is used", __func__);
+			pr_info("%s:fsa8500 hs detection is used\n", __func__);
 			/* dapm controls for fsa8500 */
 			snd_soc_dapm_new_controls(dapm, fsa8500_dapm_widgets,
 					ARRAY_SIZE(fsa8500_dapm_widgets));
@@ -973,7 +973,7 @@ static int msm_snd_ext_hs_detect(struct snd_soc_codec *codec)
 			snd_soc_dapm_sync(dapm);
 			return err;
 		}
-		pr_info("%s:fsa8500 hs det load error %d", __func__, err);
+		pr_info("%s:fsa8500 hs det load error %d\n", __func__, err);
 	}
 
 #endif
@@ -1343,7 +1343,7 @@ static int msm_slim_1_tx_ch_put(struct snd_kcontrol *kcontrol,
 static int msm_slim_1_rate_get(struct snd_kcontrol *kcontrol,
 			       struct snd_ctl_elem_value *ucontrol)
 {
-	pr_debug("%s: msm_slim_1_rate  = %d", __func__,
+	pr_debug("%s: msm_slim_1_rate  = %d\n", __func__,
 		 msm_slim_1_rate);
 
 	ucontrol->value.integer.value[0] = msm_slim_1_rate;
@@ -1442,7 +1442,7 @@ static int msm_hdmi_rx_ch_put(struct snd_kcontrol *kcontrol,
 {
 	msm_hdmi_rx_ch = ucontrol->value.integer.value[0] + 2;
 	if (msm_hdmi_rx_ch > 8) {
-		pr_err("%s: channels exceeded 8.Limiting to max channels-8\n",
+		pr_err("%s: channels exceeded 8. Limiting to max. of 8 channels\n",
 			__func__);
 		msm_hdmi_rx_ch = 8;
 	}
@@ -5011,13 +5011,14 @@ static int apq8084_asoc_machine_probe(struct platform_device *pdev)
 					__func__,
 					pdata->tfa9890_earpiece_gpio, ret);
 			else {
-				pr_info("earpice gpio %d\n", pdata->tfa9890_earpiece_gpio);
+				dev_info(card->dev,
+					"earpiece gpio %d\n", pdata->tfa9890_earpiece_gpio);
 				gpio_direction_output(pdata->tfa9890_earpiece_gpio, 0);
 			}
 
 		} else
 			dev_info(&pdev->dev, "property %s not detected in node %s",
-				"qcom,tfa9890-earpiece-gpio",
+				"qcom,tfa9890-earpiece-gpio\n",
 				pdev->dev.of_node->full_name);
 	} else {
 		memcpy((apq8084_dai_tfa9890_links + card->num_links),
@@ -5086,11 +5087,11 @@ static int apq8084_asoc_machine_probe(struct platform_device *pdev)
 				"qcom,us-euro-gpios", 0);
 	if (pdata->us_euro_gpio < 0) {
 		dev_info(&pdev->dev, "property %s not detected in node %s",
-			"qcom,us-euro-gpios",
+			"qcom,us-euro-gpios\n",
 			pdev->dev.of_node->full_name);
 	} else {
 		dev_dbg(&pdev->dev, "%s detected %d",
-			"qcom,us-euro-gpios", pdata->us_euro_gpio);
+			"qcom,us-euro-gpios\n", pdata->us_euro_gpio);
 		mbhc_cfg.swap_gnd_mic = apq8084_swap_gnd_mic;
 	}
 
@@ -5103,7 +5104,7 @@ static int apq8084_asoc_machine_probe(struct platform_device *pdev)
 			"qcom,prim-auxpcm-gpio-set", &auxpcm_pri_gpio_set);
 	if (ret) {
 		dev_err(&pdev->dev, "Looking up %s property in node %s failed",
-			"qcom,prim-auxpcm-gpio-set",
+			"qcom,prim-auxpcm-gpio-set\n",
 			pdev->dev.of_node->full_name);
 		goto err;
 	}
