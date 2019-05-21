@@ -290,7 +290,7 @@ static int nitrous_rfkill_set_power(void *data, bool blocked)
 		blocked);
 
 	if (blocked == lpm->rfkill_blocked) {
-		pr_info("%s already in requsted state. Ignoring.\n", __func__);
+		pr_info("%s: already in requested state. Ignoring.\n", __func__);
 		return 0;
 	}
 
