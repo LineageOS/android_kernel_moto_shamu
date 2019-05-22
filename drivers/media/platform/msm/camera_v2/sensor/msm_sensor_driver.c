@@ -816,7 +816,7 @@ int32_t msm_sensor_driver_probe(void *setting)
 		goto FREE_CAMERA_INFO;
 	}
 
-	pr_err("%s probe succeeded", slave_info->sensor_name);
+	pr_info("%s probe succeeded\n", slave_info->sensor_name);
 
 	/* Save sensor info*/
 	s_ctrl->sensordata->cam_slave_info = slave_info;
