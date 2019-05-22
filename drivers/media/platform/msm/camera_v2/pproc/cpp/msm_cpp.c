@@ -793,7 +793,7 @@ static int cpp_init_hardware(struct cpp_device *cpp_dev)
 	cpp_dev->taskletq_idx = 0;
 	atomic_set(&cpp_dev->irq_cnt, 0);
 	msm_cpp_create_buff_queue(cpp_dev, MSM_CPP_MAX_BUFF_QUEUE);
-	pr_err("stream_cnt:%d\n", cpp_dev->stream_cnt);
+	pr_info("stream_cnt:%d\n", cpp_dev->stream_cnt);
 	cpp_dev->stream_cnt = 0;
 	if (cpp_dev->is_firmware_loaded == 1) {
 		disable_irq(cpp_dev->irq->start);
