@@ -22,8 +22,6 @@
 #include <linux/fs.h>
 #include "pcie.h"
 
-#define BCM_DBG pr_debug
-
 static int gpio_wl_reg_on = 82;
 static int brcm_wake_irq = -1;
 
@@ -220,23 +218,23 @@ int __init brcm_wifi_init_gpio(struct device_node *np)
 		wl_reg_on = of_get_named_gpio(np, "wl_reg_on", 0);
 		if (wl_reg_on >= 0) {
 			gpio_wl_reg_on = wl_reg_on;
-			BCM_DBG("%s: wl_reg_on GPIO %d\n", __func__, wl_reg_on);
+			pr_debug("%s: wl_reg_on GPIO %d\n", __func__, wl_reg_on);
 		}
 	}
 
 	if (gpio_request(gpio_wl_reg_on, "WL_REG_ON"))
-		pr_err("%s: Faiiled to request gpio %d for WL_REG_ON\n",
+		pr_err("%s: Failed to request gpio %d for WL_REG_ON\n",
 			__func__, gpio_wl_reg_on);
 	else
-		pr_err("%s: gpio_request WL_REG_ON done\n", __func__);
+		pr_debug("%s: gpio_request WL_REG_ON done\n", __func__);
 
 	if (gpio_direction_output(gpio_wl_reg_on, 1))
 		pr_err("%s: WL_REG_ON failed to pull up\n", __func__);
 	else
-		BCM_DBG("%s: WL_REG_ON is pulled up\n", __func__);
+		pr_debug("%s: WL_REG_ON is pulled up\n", __func__);
 
 	if (gpio_get_value(gpio_wl_reg_on))
-		BCM_DBG("%s: Initial WL_REG_ON: [%d]\n",
+		pr_debug("%s: Initial WL_REG_ON: [%d]\n",
 			__func__, gpio_get_value(gpio_wl_reg_on));
 
 	return 0;
@@ -244,8 +242,8 @@ int __init brcm_wifi_init_gpio(struct device_node *np)
 
 int brcm_wlan_power(int on)
 {
-	BCM_DBG("------------------------------------------------");
-	BCM_DBG("------------------------------------------------\n");
+	pr_debug("------------------------------------------------");
+	pr_debug("------------------------------------------------\n");
 	pr_info("%s Enter: power %s\n", __func__, on ? "on" : "off");
 
 	if (on) {
@@ -442,7 +440,7 @@ static int __init brcm_mac_addr_setup(char *str)
 
 	if (!str)
 		return 0;
-	BCM_DBG("wlan MAC = %s\n", str);
+	pr_debug("wlan MAC = %s\n", str);
 	if (strlen(str) >= sizeof(macstr))
 		return 0;
 	strlcpy(macstr, str, sizeof(macstr));
@@ -536,7 +534,7 @@ int __init brcm_wlan_init(void)
 	int rc;
 	struct device_node *np;
 
-	BCM_DBG("%s: START\n", __func__);
+	pr_debug("%s: START\n", __func__);
 
 #ifdef CONFIG_DHD_USE_STATIC_BUF
 	brcm_init_wlan_mem();
