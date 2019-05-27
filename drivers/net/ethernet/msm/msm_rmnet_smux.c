@@ -105,7 +105,7 @@ static ssize_t timeout_suspend_store(struct device *d,
 				     struct device_attribute *attr,
 				     const char *buf, size_t n)
 {
-	timeout_suspend_us = strict_strtoul(buf, NULL, 10);
+	timeout_suspend_us = kstrtoul(buf, NULL, 10);
 	return n;
 }
 
@@ -195,10 +195,10 @@ static ssize_t timeout_store(struct device *d,
 {
 #ifndef CONFIG_HAS_EARLYSUSPEND
 	struct rmnet_private *p = netdev_priv(to_net_dev(d));
-	p->timeout_us = timeout_us = strict_strtoul(buf, NULL, 10);
+	p->timeout_us = timeout_us = kstrtoul(buf, NULL, 10);
 #else
 /* If using early suspend/resume hooks do not write the value on store. */
-	timeout_us = strict_strtoul(buf, NULL, 10);
+	timeout_us = kstrtoul(buf, NULL, 10);
 #endif /* CONFIG_HAS_EARLYSUSPEND */
 	return n;
 }
