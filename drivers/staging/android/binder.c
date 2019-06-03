@@ -702,13 +702,11 @@ static int binder_update_page_range(struct binder_proc *proc, int allocate,
 		}
 		/* vm_insert_page does not seem to increment the refcount */
 	}
+	preempt_disable();
 	if (mm) {
 		up_write(&mm->mmap_sem);
 		mmput(mm);
 	}
-
-	preempt_disable();
-
 	return 0;
 
 free_range:
@@ -727,13 +725,11 @@ err_alloc_page_failed:
 		;
 	}
 err_no_vma:
+	preempt_disable();
 	if (mm) {
 		up_write(&mm->mmap_sem);
 		mmput(mm);
 	}
-
-	preempt_disable();
-
 	return -ENOMEM;
 }
 
