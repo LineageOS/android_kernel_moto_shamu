@@ -67,7 +67,7 @@ static ssize_t led_max_brightness_store(struct device *dev,
 	ssize_t ret = -EINVAL;
 	unsigned long state = 0;
 
-	ret = strict_strtoul(buf, 10, &state);
+	ret = kstrtoul(buf, 10, &state);
 	if (!ret) {
 		ret = size;
 		if (state > LED_FULL)
