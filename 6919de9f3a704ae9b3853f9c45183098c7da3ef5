@@ -46,6 +46,30 @@
       "revId": "6919de9f3a704ae9b3853f9c45183098c7da3ef5",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "83774271_117bbbad",
+        "filename": "kernel/ptrace.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 673,
+      "author": {
+        "id": 1053
+      },
+      "writtenOn": "2019-07-11T16:28:04Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "2c38d71f_18d20d99",
+      "range": {
+        "startLine": 673,
+        "startChar": 4,
+        "endLine": 673,
+        "endChar": 34
+      },
+      "revId": "6919de9f3a704ae9b3853f9c45183098c7da3ef5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
