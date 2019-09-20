@@ -407,13 +407,14 @@ static int qseecom_register_listener(struct qseecom_dev_handle *data,
 		return -ENOMEM;
 	}
 
-	data->listener.id = rcvd_lstnr.listener_id;
 	init_waitqueue_head(&new_entry->rcv_req_wq);
 
 	spin_lock_irqsave(&qseecom.registered_listener_list_lock, flags);
 	list_add_tail(&new_entry->list, &qseecom.registered_listener_list_head);
 	spin_unlock_irqrestore(&qseecom.registered_listener_list_lock, flags);
 
+	data->listener.id = rcvd_lstnr.listener_id;
+	pr_debug("Service %d is registered\n", rcvd_lstnr.listener_id);
 	return ret;
 }
 
@@ -426,6 +427,11 @@ static int qseecom_unregister_listener(struct qseecom_dev_handle *data)
 	struct qseecom_registered_listener_list *ptr_svc = NULL;
 	struct qseecom_command_scm_resp resp;
 	struct ion_handle *ihandle = NULL;		/* Retrieve phy addr */
+
+	if (data->released) {
+		pr_err("Don't unregister lsnr %d\n", data->listener.id);
+		return -EINVAL;
+	}
 
 	req.qsee_cmd_id = QSEOS_DEREGISTER_LISTENER;
 	req.listener_id = data->listener.id;
