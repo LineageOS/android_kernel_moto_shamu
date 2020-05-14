@@ -5221,8 +5221,11 @@
 		compatible = "qcom,msm-pcm-routing";
 	};
 
-	qcom,msm-pcm-lpa {
-		compatible = "qcom,msm-pcm-lpa";
+	qcom,msm-pcm-ultra-low-latency {
+		compatible = "qcom,msm-pcm-dsp";
+		qcom,msm-pcm-dsp-id = <1>;
+		qcom,msm-pcm-low-latency;
+		qcom,latency-level = "ultra";
 	};
 
 	qcom,msm-compr-dsp {
