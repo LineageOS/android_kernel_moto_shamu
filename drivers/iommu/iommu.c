@@ -180,7 +180,7 @@ struct iommu_group *iommu_group_alloc(void)
 		mutex_lock(&iommu_group_mutex);
 		idr_remove(&iommu_group_idr, group->id);
 		mutex_unlock(&iommu_group_mutex);
-		kfree(group);
+		kobject_put(&group->kobj);
 		return ERR_PTR(ret);
 	}
 
