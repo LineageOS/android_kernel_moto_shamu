@@ -101,31 +101,24 @@ static int validate_session_pkt(struct list_head *sessions,
 	return invalid;
 }
 
-static inline int VALIDATE_PKT_SIZE(u32 rem_size, u32 msg_size)
-{
-	if (rem_size < msg_size) {
-		dprintk(VIDC_ERR,
-			"session_init_donesys_init_done: bad_pkt_size\n");
-		return false;
-	}
-	return true;
-}
-
 static void hfi_process_sess_evt_seq_changed(
 		msm_vidc_callback callback, u32 device_id,
 		struct hfi_msg_event_notify_packet *pkt)
 {
 	struct msm_vidc_cb_cmd_done cmd_done;
 	struct msm_vidc_cb_event event_notify;
-	u32 num_properties_changed, rem_size;
+	int num_properties_changed;
 	struct hfi_frame_size *frame_sz;
 	struct hfi_profile_level *profile_level;
 	u8 *data_ptr;
 	int prop_id;
 	dprintk(VIDC_DBG, "RECEIVED: EVENT_NOTIFY[%u]\n", pkt->session_id);
-	if (!VALIDATE_PKT_SIZE(pkt->size,
-			       sizeof(struct hfi_msg_event_notify_packet)))
+	if (sizeof(struct hfi_msg_event_notify_packet)
+		> pkt->size) {
+		dprintk(VIDC_ERR,
+				"hal_process_session_init_done: bad_pkt_size\n");
 		return;
+	}
 
 	memset(&cmd_done, 0, sizeof(struct msm_vidc_cb_cmd_done));
 	memset(&event_notify, 0, sizeof(struct
@@ -151,18 +144,10 @@ static void hfi_process_sess_evt_seq_changed(
 	}
 	if (num_properties_changed) {
 		data_ptr = (u8 *) &pkt->rg_ext_event_data[0];
-		rem_size = pkt->size - sizeof(struct
-				hfi_msg_event_notify_packet) + sizeof(u32);
 		do {
-			if (!VALIDATE_PKT_SIZE(rem_size, sizeof(u32)))
-				return;
 			prop_id = (int) *((u32 *)data_ptr);
-			rem_size -= sizeof(u32);
 			switch (prop_id) {
 			case HFI_PROPERTY_PARAM_FRAME_SIZE:
-				if (!VALIDATE_PKT_SIZE(rem_size, sizeof(struct
-					hfi_frame_size)))
-					return;
 				data_ptr = data_ptr + sizeof(u32);
 				frame_sz =
 					(struct hfi_frame_size *) data_ptr;
@@ -172,12 +157,8 @@ static void hfi_process_sess_evt_seq_changed(
 					frame_sz->height, frame_sz->width);
 				data_ptr +=
 					sizeof(struct hfi_frame_size);
-				rem_size -= sizeof(struct hfi_frame_size);
 				break;
 			case HFI_PROPERTY_PARAM_PROFILE_LEVEL_CURRENT:
-				if (!VALIDATE_PKT_SIZE(rem_size, sizeof(struct
-					hfi_profile_level)))
-					return;
 				data_ptr = data_ptr + sizeof(u32);
 				profile_level =
 					(struct hfi_profile_level *) data_ptr;
@@ -186,7 +167,6 @@ static void hfi_process_sess_evt_seq_changed(
 					profile_level->level);
 				data_ptr +=
 					sizeof(struct hfi_profile_level);
-				rem_size -= sizeof(struct hfi_profile_level);
 				break;
 			default:
 				dprintk(VIDC_ERR,
