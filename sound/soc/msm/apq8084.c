@@ -2669,6 +2669,10 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_dapm_ignore_suspend(dapm, "Headset Mic");
 	snd_soc_dapm_ignore_suspend(dapm, "ANCRight Headset Mic");
 	snd_soc_dapm_ignore_suspend(dapm, "ANCLeft Headset Mic");
+	snd_soc_dapm_ignore_suspend(dapm, "Secondary Mic");
+	snd_soc_dapm_ignore_suspend(dapm, "Tertiary Mic");
+	snd_soc_dapm_ignore_suspend(dapm, "Quaternary Mic");
+	snd_soc_dapm_ignore_suspend(dapm, "Quinary Mic");
 
 	snd_soc_dapm_ignore_suspend(dapm, "MADINPUT");
 	snd_soc_dapm_ignore_suspend(dapm, "EAR");
