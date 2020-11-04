@@ -60,7 +60,7 @@
 #include <linux/err.h>
 #include <linux/mutex.h>
 #include <linux/clk.h>
-#include <linux/wakelock.h>
+#include <linux/pm.h>
 #include <linux/of.h>
 #include <linux/of_gpio.h>
 #include <linux/regulator/consumer.h>
@@ -187,7 +187,7 @@ static struct drv260x {
 } *drv260x;
 
 static struct vibrator {
-	struct wake_lock wklock;
+	struct wakeup_source wakeup_source;
 	struct pwm_device *pwm_dev;
 	struct hrtimer timer;
 	struct mutex lock;
@@ -645,7 +645,7 @@ static void vibrator_off(void)
 		}
 	}
 
-	wake_unlock(&vibdata.wklock);
+	__pm_relax(&vibdata.wakeup_source);
 }
 
 static void vibrator_enable(struct timed_output_dev *dev, int value)
@@ -658,7 +658,7 @@ static void vibrator_enable(struct timed_output_dev *dev, int value)
 	cancel_work_sync(&vibdata.work);
 
 	if (value) {
-		wake_lock(&vibdata.wklock);
+		__pm_stay_awake(&vibdata.wakeup_source);
 
 		mode = drv260x_read_reg(MODE_REG) & DRV260X_MODE_MASK;
 		/* Only change the mode if not already in RTP mode;
@@ -713,7 +713,7 @@ static void play_effect(struct work_struct *work)
 		schedule_timeout_interruptible(msecs_to_jiffies
 					       (GO_BIT_POLL_INTERVAL));
 
-	wake_unlock(&vibdata.wklock);
+	__pm_relax(&vibdata.wakeup_source);
 	if (audio_haptics_enabled)
 		setAudioHapticsEnabled(YES);
 	else
@@ -1141,7 +1141,7 @@ static ssize_t drv260x_write(struct file *filp, const char __user *buff, size_t 
 			    (&vibdata.sequence, &buff[1],
 			     min(len - 1, sizeof(vibdata.sequence)))) {
 				vibdata.should_stop = NO;
-				wake_lock(&vibdata.wklock);
+				__pm_stay_awake(&vibdata.wakeup_source);
 				schedule_work(&vibdata.work_play_eff);
 			}
 			break;
@@ -1167,7 +1167,7 @@ static ssize_t drv260x_write(struct file *filp, const char __user *buff, size_t 
 			value |= data[0];
 
 			if (value) {
-				wake_lock(&vibdata.wklock);
+				__pm_stay_awake(&vibdata.wakeup_source);
 
 				mode =
 				    drv260x_read_reg(MODE_REG) &
@@ -1328,7 +1328,7 @@ static int drv260x_init(void)
 	INIT_WORK(&vibdata.work, vibrator_work);
 	INIT_WORK(&vibdata.work_play_eff, play_effect);
 
-	wake_lock_init(&vibdata.wklock, WAKE_LOCK_SUSPEND, "vibrator");
+	wakeup_source_init(&vibdata.wakeup_source, "vibrator");
 	mutex_init(&vibdata.lock);
 
 	pr_info("drv260x: initialized\n");
