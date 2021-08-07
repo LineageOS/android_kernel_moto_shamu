@@ -96,7 +96,7 @@ static struct snd_soc_codec *right_codec;
 static const struct tfa9890_regs tfa9890_reg_defaults[] = {
 {
 	.reg = TFA9890_BATT_CTL_REG,
-	.value = 0x13A2,
+	.value = 0x1386,
 },
 {
 	.reg = TFA9890_I2S_CTL_REG,
