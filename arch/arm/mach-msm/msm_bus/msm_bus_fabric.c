@@ -38,13 +38,9 @@ static int msm_bus_fabric_add_node(struct msm_bus_fabric *fabric,
 	int status = -ENOMEM, ctx;
 	MSM_BUS_DBG("msm_bus_fabric_add_node: ID %d Gw: %d\n",
 		info->node_info->priv_id, info->node_info->gateway);
-	status = radix_tree_preload(GFP_ATOMIC);
-	if (status)
-		goto out;
 
 	status = radix_tree_insert(&fabric->fab_tree, info->node_info->priv_id,
 			info);
-	radix_tree_preload_end();
 	if (IS_SLAVE(info->node_info->priv_id))
 		radix_tree_tag_set(&fabric->fab_tree, info->node_info->priv_id,
 			SLAVE_NODE);
@@ -76,7 +72,6 @@ static int msm_bus_fabric_add_node(struct msm_bus_fabric *fabric,
 				info->node_info->id, fabdev->num_nr_lim);
 	}
 
-out:
 	return status;
 }
 
